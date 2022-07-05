@@ -7,3 +7,6 @@ dependencies:
   - mkl<2022
   - pytorch
   - h5py
+  - networkx
+  - scipy
+  - scikit-learn
