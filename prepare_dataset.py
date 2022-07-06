@@ -131,7 +131,7 @@ def prepare_dataset(combined_hdf5_file: Path, prepared_hdf5_file: Path):
 def main():
     data_path = Path('hdf5_data')
     combined_hdf5_file = Path('shapenet_combined.h5')
-    prepared_hdf5_file = Path('shapenet_prepared_test.h5')
+    prepared_hdf5_file = Path('shapenet_prepared.h5')
     combine_dataset(data_path, combined_hdf5_file)
     prepare_dataset(combined_hdf5_file, prepared_hdf5_file)
 
