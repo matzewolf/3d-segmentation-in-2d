@@ -7,6 +7,13 @@ from utils import jitter_point_cloud, gpgl2_segmentation
 
 
 def combine_split(split: str, files: list[Path], result_file: h5py.File):
+    """
+    Combines all HDF5 files for a specific data split into a new combined HDF5 file.
+
+    :param split: Which data split to process, either 'train', 'val' or 'test'.
+    :param files: List of file paths of HDF5 files that belong to this split.
+    :param result_file: HDF5 file where the results should be written into.
+    """
     assert split in ['train', 'val', 'test'], ValueError("Invalid split")
 
     split_length = 0
@@ -43,6 +50,12 @@ def combine_split(split: str, files: list[Path], result_file: h5py.File):
 
 
 def combine_dataset(data_path: Path, combined_hdf5_file: Path):
+    """
+    Combines all raw HDF5 data files for the ShapeNet Part dataset into one combined HDF5 data file.
+
+    :param data_path: Path to the downloaded ShapeNet Part directory.
+    :param combined_hdf5_file: Path to the generated combined HDF5 file.
+    """
     train_files = []
     val_files = []
     test_files = []
@@ -62,6 +75,16 @@ def combine_dataset(data_path: Path, combined_hdf5_file: Path):
 
 def prepare_split(split: str, input_file: Path, result_file: h5py.File, num_repeats_train: int = 5,
                   jitter_train_points: bool = True):
+    """
+    Prepares each split such that 3D point clouds with part annotations are transformed into 2D images where pixels are
+    assigned to 3D points with part annotations. See the paper for more details.
+
+    :param split: Which data split to process, either 'train', 'val' or 'test'.
+    :param input_file: Path to the combined ShapeNet Part HDF5 data file.
+    :param result_file: HDF5 file where the results should be written into.
+    :param num_repeats_train: How many times the training data should be repeatedly processed.
+    :param jitter_train_points: Weather the training data points should be jittered with some noise.
+    """
     assert split in ['train', 'val', 'test'], ValueError("Invalid split")
 
     if split == 'train':
@@ -122,6 +145,13 @@ def prepare_split(split: str, input_file: Path, result_file: h5py.File, num_repe
 
 
 def prepare_dataset(combined_hdf5_file: Path, prepared_hdf5_file: Path):
+    """
+    Prepares the combined HDF5 data with 3D point clouds with part annotations into 2D images where pixels are assigned
+    to 3D points with part annotations. See the paper for more details.
+
+    :param combined_hdf5_file: Path to the combined HDF5 data file.
+    :param prepared_hdf5_file: Path to the prepared HDF5 data file.
+    """
     with h5py.File(prepared_hdf5_file, 'w') as result_file:
         prepare_split('train', combined_hdf5_file, result_file)
         prepare_split('val', combined_hdf5_file, result_file)
@@ -129,6 +159,9 @@ def prepare_dataset(combined_hdf5_file: Path, prepared_hdf5_file: Path):
 
 
 def main():
+    """
+    Script that executes both the data combination and preparation step.
+    """
     data_path = Path('hdf5_data')
     combined_hdf5_file = Path('shapenet_combined.h5')
     prepared_hdf5_file = Path('shapenet_prepared.h5')
