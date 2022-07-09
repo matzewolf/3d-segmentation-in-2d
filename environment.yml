@@ -10,3 +10,5 @@ dependencies:
   - networkx
   - scipy
   - scikit-learn
+  # dev dependencies
+  - pre-commit

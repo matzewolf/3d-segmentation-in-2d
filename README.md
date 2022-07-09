@@ -24,3 +24,7 @@ conda activate 3d-seg-in-2d
 ./download_data.sh
 ```
 will download and extract the ShapeNet Part dataset from Stanford University into the directory `hdf5_data`.
+
+## Contributing
+
+To install the pre-commit hooks, run `pre-commit install`.
