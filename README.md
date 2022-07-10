@@ -1,5 +1,9 @@
 # Learning to segment 3D point clouds in 2D image space
 
+[![pre-commit.ci status](
+    https://results.pre-commit.ci/badge/github/matzewolf/3d-segmentation-in-2d/main.svg)
+](https://results.pre-commit.ci/latest/github/matzewolf/3d-segmentation-in-2d/main)
+
 This repository is a community implementation of the paper
 [Learning to Segment 3D Point Clouds in 2D Image Space](https://arxiv.org/abs/2003.05593)
 by Lyu et al. using the PyTorch framework. The official TensorFlow implementation by the authors can be found
