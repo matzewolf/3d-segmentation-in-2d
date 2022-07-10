@@ -32,3 +32,4 @@ will download and extract the ShapeNet Part dataset from Stanford University int
 ## Contributing
 
 To install the pre-commit hooks, run `pre-commit install`.
+Now you can run the pre-commit hooks locally with `pre-commit run`.
