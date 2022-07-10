@@ -16,11 +16,16 @@ def jitter_point_cloud(points_3d: NDArray, sigma: float = 0.01,
     :return: BxNx3 array, jittered batch of point clouds
     """
     assert clip > 0
-    return points_3d + np.clip(sigma * np.random.randn(*points_3d.shape), -clip, clip)
+    return points_3d + np.clip(sigma * np.random.randn(*points_3d.shape),
+                               -clip, clip)
 
 
-def gpgl2_segmentation(points_3d: NDArray, num_cuts: int = 32,
-                       size_sub: int = 16, size_top: int = 16) -> tuple[NDArray, float]:
+def gpgl2_segmentation(
+        points_3d: NDArray,
+        num_cuts: int = 32,
+        size_sub: int = 16,
+        size_top: int = 16
+) -> tuple[NDArray, float]:
     k_means = KMeans(n_clusters=num_cuts, n_init=1, max_iter=100)
     points_3d = points_3d + np.random.rand(*points_3d.shape) * 1e-6
     num_points = points_3d.shape[0]
@@ -57,7 +62,8 @@ def gpgl2_segmentation(points_3d: NDArray, num_cuts: int = 32,
     pos_all = []
     for idx in range(num_points):
         label = labels[idx]
-        pos_all.append(pos_cuts[label][cuts_count[label]] + pos_top[label] * size_sub)
+        pos_all.append(
+            pos_cuts[label][cuts_count[label]] + pos_top[label] * size_sub)
         cuts_count[label] += 1
     pos_all = np.array(pos_all)
 
@@ -149,7 +155,8 @@ def gpgl_layout_push(pos: NDArray, size: int) -> NDArray:
 
             mask_target = mask[b_down:b_up, b_left:b_right]
             if mask_target.min() == 0:
-                pos_target = np.unravel_index(np.argmin(mask_target), mask_target.shape)
+                pos_target = np.unravel_index(np.argmin(mask_target),
+                                              mask_target.shape)
                 pos_mask = pos_target + np.array([b_down, b_left])
             else:
                 pos_empty = np.array(np.where(mask == 0)).T
