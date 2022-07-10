@@ -1,3 +1,8 @@
+# Dataset
+hdf5_data/
+*.h5
+*.hdf5
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,3 +132,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# IDE configs
+.vscode/
+.idea/
+
+# MacOS configs
+.DS_Store

@@ -1,0 +1,14 @@
+name: 3d-seg-in-2d
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - mkl<2022
+  - pytorch
+  - h5py
+  - networkx
+  - scipy
+  - scikit-learn
+  # dev dependencies
+  - pre-commit
