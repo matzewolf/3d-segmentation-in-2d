@@ -1,0 +1,10 @@
+experiment_name: 
+is_overfit: 
+device: 
+max_epochs: 
+train_batch_size: 4
+val_batch_size: 1
+learning_rate: 0.0001
+resume_ckpt: 
+print_every_n: 
+validate_every_n: 
