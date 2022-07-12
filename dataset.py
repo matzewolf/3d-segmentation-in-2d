@@ -4,7 +4,7 @@ import h5py
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset
-
+import numpy as np
 from prepare_dataset import combine_dataset, prepare_dataset
 
 
@@ -36,13 +36,13 @@ class ShapeNetPartDataset(Dataset):
             ValueError("Invalid split")
         self.data = h5py.File(path, 'r')
         if split != 'overfit':
-            self.points_3d = torch.from_numpy(self.data[f"x_{split}"])
-            self.parts = torch.from_numpy(self.data[f"s_{split}"])
-            self.points_2d = torch.from_numpy(self.data[f"p_{split}"])
+            self.points_3d = (self.data[f"x_{split}"])
+            self.parts = (self.data[f"s_{split}"])
+            self.points_2d = (self.data[f"p_{split}"])
         else:
-            points_3d = torch.from_numpy(self.data["x_val"])
-            parts = torch.from_numpy(self.data["s_val"])
-            points_2d = torch.from_numpy(self.data["p_val"])
+            points_3d = (self.data["x_val"])
+            parts = (self.data["s_val"])
+            points_2d = (self.data["p_val"])
             self.points_3d = torch.unsqueeze(points_3d[0], 0)
             self.parts = torch.unsqueeze(parts[0], 0)
             self.points_2d = torch.unsqueeze(points_2d[0], 0)
@@ -51,12 +51,17 @@ class ShapeNetPartDataset(Dataset):
 
     def __getitem__(self, item) -> tuple[Tensor, Tensor]:
         points_2d_item = self.points_2d[item]
-        points_3d_image = torch.zeros((self.size_image, self.size_image, 3),
-                                      dtype=torch.float32)
-        parts_image = torch.zeros((self.size_image, self.size_image, 3),
-                                  dtype=torch.float32) + self.num_classes
+        
+        points_3d_image = np.zeros((self.size_image, self.size_image, 3),
+                                      dtype=np.float32)
+        
+        parts_image = np.zeros((self.size_image, self.size_image, 3),
+                                  dtype=np.float32) + self.num_classes*1.0
+        
+        print(points_2d_item.shape, points_3d_image.shape, self.points_3d[item].shape)
         points_3d_image[points_2d_item[:, 0],
                         points_2d_item[:, 1]] = self.points_3d[item]
+        
         parts_image[points_2d_item[:, 0],
                     points_2d_item[:, 1]] = self.parts[item]
         return points_3d_image, parts_image
