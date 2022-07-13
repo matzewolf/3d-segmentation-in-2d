@@ -68,7 +68,16 @@ class ShapeNetPartDataset(Dataset):
         
         parts_image[points_2d_item[:, 0],
                     points_2d_item[:, 1]] = self.parts[item]
-        return points_3d_image, parts_image
+        return {
+                "3d_points":points_3d_image,
+                "part_label":parts_image
+            }
 
     def __len__(self) -> int:
         return len(self.points_3d)
+    
+    @staticmethod
+    def move_batch_to_device(batch, device):
+        # TODO add code to move batch to device
+        batch["3d_points"] = batch["3d_points"].to(device)
+        batch["part_label"] = batch["part_label"].to(device)
