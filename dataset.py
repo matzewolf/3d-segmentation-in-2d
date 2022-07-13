@@ -7,7 +7,6 @@ from torch.utils.data import Dataset
 import numpy as np
 from prepare_dataset import combine_dataset, prepare_dataset
 
-
 class ShapeNetPartDataset(Dataset):
     """
     PyTorch dataset class for the Stanford ShapeNet Part dataset, however with
@@ -46,6 +45,12 @@ class ShapeNetPartDataset(Dataset):
             self.points_3d = torch.unsqueeze(points_3d[0], 0)
             self.parts = torch.unsqueeze(parts[0], 0)
             self.points_2d = torch.unsqueeze(points_2d[0], 0)
+            
+        # a fix for the parts shape --> reshape from (m,n) to (m,n,1)
+        # a possible fix is to run the prepare data again with this reshaping step 
+        # or do it here to save time of running the preparation again.
+        self.parts = np.expand_dims(self.parts, axis=-1)
+        
         assert len(self.points_3d) == len(self.parts) == len(self.points_2d), \
             "Instance dimension of 3D points, parts and 2D points do not match"
 
@@ -55,10 +60,9 @@ class ShapeNetPartDataset(Dataset):
         points_3d_image = np.zeros((self.size_image, self.size_image, 3),
                                       dtype=np.float32)
         
-        parts_image = np.zeros((self.size_image, self.size_image, 3),
+        parts_image = np.zeros((self.size_image, self.size_image, 1),
                                   dtype=np.float32) + self.num_classes*1.0
         
-        print(points_2d_item.shape, points_3d_image.shape, self.points_3d[item].shape)
         points_3d_image[points_2d_item[:, 0],
                         points_2d_item[:, 1]] = self.points_3d[item]
         
