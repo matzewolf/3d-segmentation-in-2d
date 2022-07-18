@@ -5,13 +5,17 @@ import torch
 import torch.nn as nn
 
 from model import MultiSacleUNet
+from dataset import ShapeNetPartDataset
 
 
 def train(model, train_dataloader, val_dataloader, device, config):
     # Declare loss and move to device;     
-    loss = nn.CrossEntropyLoss()
-    loss.to(device)
-    
+    criterion = nn.CrossEntropyLoss()
+    criterion.to(device)
+
+    eval_loss = nn.CrossEntropyLoss()
+    eval_loss.to(device)
+
     # Declare optimizer with learning rate given in config
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
     
@@ -24,15 +28,16 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
     for epoch in range(config['max_epochs']):
         for batch_idx, batch in enumerate(train_dataloader):
-            # TODO: Move batch to device
-            
+            print(batch.keys())
+            # Move batch to device
+            ShapeNetPartDataset.move_batch_to_device(batch, device)
             # set optimizer gradients to zero, perform forward pass
             optimizer.zero_grad()
-            predicted = model(batch_val['input_sdf'])
+            predicted_part_label = model(batch['3d_points'])
             
 
-            # TODO: Compute loss, Compute gradients, Update network parameters
-            loss = loss(predicted, )  
+            # Compute loss, Compute gradients, Update network parameters
+            loss = criterion(predicted_part_label, batch['part_label'])  
 
             loss.backward()
 
@@ -53,15 +58,17 @@ def train(model, train_dataloader, val_dataloader, device, config):
                 # Evaluation on entire validation set
                 loss_val = 0.
                 for batch_val in val_dataloader:
-                    # TODO: Move batch to device
-                    
-                    # TODO: validationf forward loss
+                    # Move batch to device
+                    ShapeNetPartDataset.move_batch_to_device(batch_val, device)
+                    #  validationf forward loss
                     with torch.no_grad():
-                        prediction = model(batch_val['input_sdf'])
+                        prediction = model(batch_val['3d_points'])
 
-                    loss_val += loss_criterion_test(reconstruction, ).item()
+                    loss_val += eval_loss(prediction, batch_val['part_label']).item()
+                    break # use one item for valdiation --> to speed up expeirments
 
                 loss_val /= len(val_dataloader)
+                print("validation loss: ", loss_val, best_loss_val)
                 if loss_val < best_loss_val:
                     torch.save(model.state_dict(), f'/runs/{config["experiment_name"]}/model_best.ckpt')
                     best_loss_val = loss_val
@@ -70,8 +77,9 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
                 # Set model back to train
                 model.train()
-
-
+            
+            
+            
 def main(config):
     """
     Function for training multi-scale U-Net on ShapeNetPart
@@ -97,7 +105,7 @@ def main(config):
         print('Using CPU')
 
     # Create Dataloaders
-    train_dataset = ShapeNetPartDataset('train' if not config['is_overfit'] else 'overfit')
+    train_dataset = ShapeNetPartDataset(path = 'shapenet_prepared.h5', split = 'train' if not config['is_overfit'] else 'overfit')
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,   # Datasets return data one sample at a time; Dataloaders use them and aggregate samples into batches
         batch_size=config['train_batch_size'],   # The size of batches is defined here
@@ -106,7 +114,7 @@ def main(config):
         pin_memory=True,  # This is an implementation detail to speed up data uploading to the GPU
     )
 
-    val_dataset = ShapeNetPartDataset('val' if not config['is_overfit'] else 'overfit')
+    val_dataset = ShapeNetPartDataset(path = 'shapenet_prepared.h5',split = 'val' if not config['is_overfit'] else 'overfit')
     val_dataloader = torch.utils.data.DataLoader(
         val_dataset,     # Datasets return data one sample at a time; Dataloaders use them and aggregate samples into batches
         batch_size=config['val_batch_size'],   # The size of batches is defined here
@@ -119,14 +127,31 @@ def main(config):
     model = MultiSacleUNet()
 
     # Load model if resuming from checkpoint
-    if config['resume_ckpt'] is not None:
-        model.load_state_dict(torch.load(config['resume_ckpt'], map_location='cpu'))
+#     if config['resume_ckpt'] is not None:
+#         model.load_state_dict(torch.load(config['resume_ckpt'], map_location='cpu'))
 
     # Move model to specified device
     model.to(device)
 
     # Create folder for saving checkpoints
-    Path(f'/runs/{config["experiment_name"]}').mkdir(exist_ok=True, parents=True)
+    Path(f'./runs/{config["experiment_name"]}').mkdir(exist_ok=True, parents=True)
 
     # Start training
     train(model, train_dataloader, val_dataloader, device, config)
+    
+    
+    
+config = {
+"experiment_name": 'test_1',
+"is_overfit": False,
+"device": 'cuda:0',
+"max_epochs": 1,
+"train_batch_size": 4,
+"val_batch_size": 1,
+"learning_rate": 0.0001,
+"resume_ckpt": False,
+"print_every_n": 1,
+"validate_every_n": 1 
+}
+
+main(config)

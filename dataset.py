@@ -20,16 +20,16 @@ class ShapeNetPartDataset(Dataset):
         process.
     :param size_sub: tdb
     """
-    def __init__(self, path: Path = Path('hdf5_data'),
-                 split: str = 'train', size_sub: int = 16):
+    def __init__(self, path: Path('hdf5_data'),
+                 split = 'train', size_sub= 16):
         self.num_classes = 50
         self.size_image = size_sub ** 2
         combined_hdf5_file = Path('shapenet_combined.h5')
         prepared_hdf5_file = Path('shapenet_prepared.h5')
-        if not combined_hdf5_file.exists():
-            combine_dataset(path, combined_hdf5_file)
-        if not prepared_hdf5_file.exists():
-            prepare_dataset(combined_hdf5_file, prepared_hdf5_file)
+        # if not combined_hdf5_file.exists():
+        #     combine_dataset(path, combined_hdf5_file)
+        # if not prepared_hdf5_file.exists():
+        #     prepare_dataset(combined_hdf5_file, prepared_hdf5_file)
 
         assert split in ['train', 'val', 'test', 'overfit'], \
             ValueError("Invalid split")
@@ -54,26 +54,27 @@ class ShapeNetPartDataset(Dataset):
         assert len(self.points_3d) == len(self.parts) == len(self.points_2d), \
             "Instance dimension of 3D points, parts and 2D points do not match"
 
-    def __getitem__(self, item) -> tuple[Tensor, Tensor]:
+    def __getitem__(self, item):
         points_2d_item = self.points_2d[item]
         
         points_3d_image = np.zeros((self.size_image, self.size_image, 3),
                                       dtype=np.float32)
         
         parts_image = np.zeros((self.size_image, self.size_image, 1),
-                                  dtype=np.float32) + self.num_classes*1.0
+                                  dtype=np.int32) + self.num_classes
         
         points_3d_image[points_2d_item[:, 0],
                         points_2d_item[:, 1]] = self.points_3d[item]
         
         parts_image[points_2d_item[:, 0],
                     points_2d_item[:, 1]] = self.parts[item]
+        
         return {
-                "3d_points":points_3d_image,
-                "part_label":parts_image
+                "3d_points":np.transpose(points_3d_image,(2,0,1)), # to adjust dimension to [N,C,H,W]
+                "part_label":np.reshape(np.eye(self.num_classes+1)[parts_image],(256,256,51))
             }
 
-    def __len__(self) -> int:
+    def __len__(self) :
         return len(self.points_3d)
     
     @staticmethod
