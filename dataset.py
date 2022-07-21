@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from prepare_dataset import combine_dataset, prepare_dataset
+from prepare_dataset import combine_dataset
+from prepare_dataset import prepare_dataset
 
 
 class ShapeNetPartDataset(Dataset):

@@ -1,13 +1,13 @@
-from pathlib import Path
-import yaml
 import argparse
+from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
+import yaml
 
-from model import MultiSacleUNet
 from dataset import ShapeNetPartDataset
+from model import MultiSacleUNet
 
 
 def train(model, train_dataloader, val_dataloader, device, config):
