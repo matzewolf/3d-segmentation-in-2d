@@ -1,8 +1,11 @@
 from pathlib import Path
-
+import sys
+import yaml
+import argparse
 import numpy as np
 import torch
 import torch.nn as nn
+
 
 from model import MultiSacleUNet
 from dataset import ShapeNetPartDataset
@@ -19,7 +22,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
     # Declare optimizer with learning rate given in config
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
     
-    # TODO: Set model to train
+    # Set model to train
     model.train()
     best_loss_val = np.inf
 
@@ -28,19 +31,16 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
     for epoch in range(config['max_epochs']):
         for batch_idx, batch in enumerate(train_dataloader):
-            print(batch.keys())
             # Move batch to device
             ShapeNetPartDataset.move_batch_to_device(batch, device)
+            
             # set optimizer gradients to zero, perform forward pass
             optimizer.zero_grad()
             predicted_part_label = model(batch['3d_points'])
             
-
             # Compute loss, Compute gradients, Update network parameters
             loss = criterion(predicted_part_label, batch['part_label'])  
-
             loss.backward()
-
             optimizer.step()
                 
             # Logging
@@ -65,18 +65,15 @@ def train(model, train_dataloader, val_dataloader, device, config):
                         prediction = model(batch_val['3d_points'])
 
                     loss_val += eval_loss(prediction, batch_val['part_label']).item()
-                    break # use one item for valdiation --> to speed up expeirments
 
                 loss_val /= len(val_dataloader)
-                print("validation loss: ", loss_val, best_loss_val)
                 if loss_val < best_loss_val:
                     torch.save(model.state_dict(), f'/runs/{config["experiment_name"]}/model_best.ckpt')
                     best_loss_val = loss_val
 
-                print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: {loss_val:.6f} | best_loss_val: {best_loss_val:.6f}')
-
-                # Set model back to train
-                model.train()
+            print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: {loss_val:.6f} | best_loss_val: {best_loss_val:.6f}')
+            # Set model back to train
+            model.train()
             
             
             
@@ -109,7 +106,7 @@ def main(config):
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,   # Datasets return data one sample at a time; Dataloaders use them and aggregate samples into batches
         batch_size=config['train_batch_size'],   # The size of batches is defined here
-        shuffle=True,    # Shuffling the order of samples is useful during training to prevent that the network learns to depend on the order of the input data
+        shuffle=True,    
         num_workers=4,   # Data is usually loaded in parallel by num_workers
         pin_memory=True,  # This is an implementation detail to speed up data uploading to the GPU
     )
@@ -126,32 +123,39 @@ def main(config):
     # Instantiate model
     model = MultiSacleUNet()
 
-    # Load model if resuming from checkpoint
-#     if config['resume_ckpt'] is not None:
-#         model.load_state_dict(torch.load(config['resume_ckpt'], map_location='cpu'))
+#     Load model if resuming from checkpoint
+    if config['resume_ckpt']:
+        model.load_state_dict(torch.load(config['resume_ckpt'], map_location='cpu'))
 
     # Move model to specified device
     model.to(device)
 
     # Create folder for saving checkpoints
     Path(f'./runs/{config["experiment_name"]}').mkdir(exist_ok=True, parents=True)
-
+    
+    # save the configurations used for this experiment
+    with open(f'./runs/{config["experiment_name"]}/used_config.yml', 'w') as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
+        
     # Start training
     train(model, train_dataloader, val_dataloader, device, config)
     
     
     
-config = {
-"experiment_name": 'test_1',
-"is_overfit": False,
-"device": 'cuda:0',
-"max_epochs": 1,
-"train_batch_size": 4,
-"val_batch_size": 1,
-"learning_rate": 0.0001,
-"resume_ckpt": False,
-"print_every_n": 1,
-"validate_every_n": 1 
-}
 
-main(config)
+if __name__ == "__main__":
+    # creare the argument paser 
+    parser = argparse.ArgumentParser(description='U-NET training configuration file path')
+    parser.add_argument("--config_path", default="./config.yaml", type = str)
+    
+    args = parser.parse_args()
+    
+    # import the configuration file
+    config = {}
+    with open(args.config_path, "r") as stream:
+        try:
+            config = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+    # train
+    main(config)
