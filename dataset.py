@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 import numpy as np
 from prepare_dataset import combine_dataset, prepare_dataset
 
+
 class ShapeNetPartDataset(Dataset):
     """
     PyTorch dataset class for the Stanford ShapeNet Part dataset, however with
@@ -18,8 +19,7 @@ class ShapeNetPartDataset(Dataset):
         process.
     :param size_sub: tdb
     """
-    def __init__(self, path: Path('hdf5_data'),
-                 split = 'train', size_sub= 16):
+    def __init__(self, path=Path('hdf5_data'), split='train', size_sub=16):
         self.num_classes = 50
         self.size_image = size_sub ** 2
         combined_hdf5_file = Path('shapenet_combined.h5')
@@ -57,7 +57,7 @@ class ShapeNetPartDataset(Dataset):
         points_2d_item = self.points_2d[item]
 
         points_3d_image = np.zeros((self.size_image, self.size_image, 3),
-                                      dtype=np.float32)
+                            dtype=np.float32)
 
         parts_image = np.zeros((self.size_image, self.size_image, 1),
                                   dtype=np.int32) + self.num_classes
@@ -69,11 +69,11 @@ class ShapeNetPartDataset(Dataset):
                     points_2d_item[:, 1]] = self.parts[item]
 
         return {
-                "3d_points":np.transpose(points_3d_image,(2,0,1)), # to adjust dimension to [N,C,H,W]
-                "part_label":np.reshape(np.eye(self.num_classes+1)[parts_image],(256,256,51))
+                "3d_points": np.transpose(points_3d_image, (2, 0, 1)),  # to adjust dimension to [N,C,H,W]
+                "part_label": np.reshape(np.eye(self.num_classes+1)[parts_image], (256, 256, 51))
             }
 
-    def __len__(self) :
+    def __len__(self):
         return len(self.points_3d)
 
     @staticmethod
