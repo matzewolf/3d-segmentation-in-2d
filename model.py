@@ -73,7 +73,7 @@ class MultiSacleUNet(nn.Module):
         outputs = outputs.view(-1, 256, 256, 50)
         outputs = self.softmax(outputs)
         # the masking operations and post-changes to the outputs
-        mask_abs = torch.abs(outputs)
+        mask_abs = torch.abs(x)
         mask_sum = torch.sum(mask_abs, axis=-1)
         mask_sign = torch.sign(mask_sum)
         single_mask = torch.unsqueeze(mask_sign, dim=-1)
