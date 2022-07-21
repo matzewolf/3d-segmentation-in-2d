@@ -3,6 +3,8 @@ import torch.nn as nn
 
 NUM_POINTS = 2048
 NUM_CUTS = 32
+INPUT_L = 256
+PARTS = 50
 SIZE_SUB = 16
 SIZE_TOP = 16
 SIZE_IMG = SIZE_SUB*SIZE_SUB
@@ -40,7 +42,7 @@ class MultiSacleUNet(nn.Module):
         self.maxPool_2 = nn.MaxPool2d(SIZE_TOP, padding=(1, 1))
 
         self.upSample_1 = nn.Upsample(size=SIZE_SUB)
-        self.upSample_2 = nn.Upsample(size=256)
+        self.upSample_2 = nn.Upsample(size=INPUT_L)
 
         self.fc1 = nn.Linear(256, 256)
         self.fc2 = nn.Linear(128, 50)
@@ -56,9 +58,9 @@ class MultiSacleUNet(nn.Module):
         x2 = self.maxPool_2(x1)
         # the UNET bottle-neck
         xg = x2
-        xg = xg.view(-1, 1, 1, 256)
+        xg = xg.view(-1, 1, 1, INPUT_L)
         xg = self.fc1(xg)
-        xg = xg.view(-1, 256, 1, 1)
+        xg = xg.view(-1, INPUT_L, 1, 1)
         y2 = xg
         # the UNET decoder
         y1 = self.upSample_1(y2)
@@ -68,16 +70,17 @@ class MultiSacleUNet(nn.Module):
         y0 = torch.cat((x0, y0), dim=1)
         y0 = self.inception_4(y0)
         # the last feed forward & softmax for output prediction
-        y0 = y0.view(-1, 256, 256, 128)
+        y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
         outputs = self.fc2(y0)
-        outputs = outputs.view(-1, 256, 256, 50)
+        outputs = outputs.view(-1, INPUT_L, INPUT_L, PARTS)
         outputs = self.softmax(outputs)
         # the masking operations and post-changes to the outputs
-        mask_abs = torch.abs(x)
-        mask_sum = torch.sum(mask_abs, axis=-1)
-        mask_sign = torch.sign(mask_sum)
+        input_for_mask = x.view(-1, INPUT_L, INPUT_L, 3)
+        mask_abs = torch.abs(input_for_mask)        
+        mask_sum = torch.sum(mask_abs, axis=-1)        
+        mask_sign = torch.sign(mask_sum)        
         single_mask = torch.unsqueeze(mask_sign, dim=-1)
-        mask = torch.tile(single_mask, (1, 1, 50))
+        mask = torch.tile(single_mask, (1, 1, PARTS))
         not_mask = 1 - single_mask
         masked_output = torch.multiply(outputs, mask)
         concat_outputs = torch.concat([masked_output, not_mask], axis=-1)
