@@ -23,7 +23,7 @@ class Inception(nn.Module):
         # second conv path
         x1 = self.cv2(x)
         x1 = self.relu(x1)
-        # concatnate different conv paths
+        # concatenate different conv paths
         x = torch.cat((x0, x1), axis=1)
         return x
 
@@ -81,4 +81,4 @@ class MultiSacleUNet(nn.Module):
         not_mask = 1 - single_mask
         masked_output = torch.multiply(outputs, mask)
         concat_outputs = torch.concat([masked_output, not_mask], axis=-1)
-        return  concat_outputs
+        return concat_outputs

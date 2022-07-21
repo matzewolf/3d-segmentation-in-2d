@@ -63,8 +63,10 @@ class ShapeNetPartDataset(Dataset):
         parts_image[points_2d_item[:, 0],
                     points_2d_item[:, 1]] = self.parts[item]
         return {
-            "3d_points": np.transpose(points_3d_image, (2, 0, 1)),  # to adjust dimension to [N,C,H,W]
-            "part_label": np.reshape(np.eye(self.num_classes+1)[parts_image], (256, 256, 51))
+            "3d_points": np.transpose(points_3d_image,
+                                      (2, 0, 1)),  # adjust dim to [N,C,H,W]
+            "part_label": np.reshape(np.eye(self.num_classes + 1)[parts_image],
+                                     (256, 256, 51)),
         }
 
     def __len__(self):
