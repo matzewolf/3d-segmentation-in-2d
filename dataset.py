@@ -28,9 +28,9 @@ class ShapeNetPartDataset(Dataset):
         combined_hdf5_file = Path('shapenet_combined.h5')
         prepared_hdf5_file = Path('shapenet_prepared.h5')
 
-        if not combined_hdf5_file.exists():
-            combine_dataset(path, combined_hdf5_file)
         if not prepared_hdf5_file.exists():
+            if not combined_hdf5_file.exists():
+                combine_dataset(path, combined_hdf5_file)
             prepare_dataset(combined_hdf5_file, prepared_hdf5_file)
 
         assert split in ['train', 'val', 'test', 'overfit'], \
