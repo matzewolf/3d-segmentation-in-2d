@@ -1,5 +1,4 @@
 from pathlib import Path
-import sys
 import yaml
 import argparse
 import numpy as np
@@ -12,7 +11,7 @@ from dataset import ShapeNetPartDataset
 
 
 def train(model, train_dataloader, val_dataloader, device, config):
-    # Declare loss and move to device;     
+    # Declare loss and move to device;
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
@@ -21,7 +20,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
     # Declare optimizer with learning rate given in config
     optimizer = torch.optim.Adam(model.parameters(), lr=config['learning_rate'])
-    
+
     # Set model to train
     model.train()
     best_loss_val = np.inf
@@ -33,16 +32,16 @@ def train(model, train_dataloader, val_dataloader, device, config):
         for batch_idx, batch in enumerate(train_dataloader):
             # Move batch to device
             ShapeNetPartDataset.move_batch_to_device(batch, device)
-            
+
             # set optimizer gradients to zero, perform forward pass
             optimizer.zero_grad()
             predicted_part_label = model(batch['3d_points'])
-            
+
             # Compute loss, Compute gradients, Update network parameters
-            loss = criterion(predicted_part_label, batch['part_label'])  
+            loss = criterion(predicted_part_label, batch['part_label'])
             loss.backward()
             optimizer.step()
-                
+
             # Logging
             train_loss_running += loss.item()
             iteration = epoch * len(train_dataloader) + batch_idx
@@ -74,9 +73,9 @@ def train(model, train_dataloader, val_dataloader, device, config):
             print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: {loss_val:.6f} | best_loss_val: {best_loss_val:.6f}')
             # Set model back to train
             model.train()
-            
-            
-            
+
+
+
 def main(config):
     """
     Function for training multi-scale U-Net on ShapeNetPart
@@ -106,7 +105,7 @@ def main(config):
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,   # Datasets return data one sample at a time; Dataloaders use them and aggregate samples into batches
         batch_size=config['train_batch_size'],   # The size of batches is defined here
-        shuffle=True,    
+        shuffle=True,
         num_workers=4,   # Data is usually loaded in parallel by num_workers
         pin_memory=True,  # This is an implementation detail to speed up data uploading to the GPU
     )
@@ -132,24 +131,24 @@ def main(config):
 
     # Create folder for saving checkpoints
     Path(f'./runs/{config["experiment_name"]}').mkdir(exist_ok=True, parents=True)
-    
+
     # save the configurations used for this experiment
     with open(f'./runs/{config["experiment_name"]}/used_config.yml', 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
-        
+
     # Start training
     train(model, train_dataloader, val_dataloader, device, config)
-    
-    
-    
+
+
+
 
 if __name__ == "__main__":
-    # creare the argument paser 
+    # creare the argument paser
     parser = argparse.ArgumentParser(description='U-NET training configuration file path')
     parser.add_argument("--config_path", default="./config.yaml", type = str)
-    
+
     args = parser.parse_args()
-    
+
     # import the configuration file
     config = {}
     with open(args.config_path, "r") as stream:
