@@ -69,19 +69,7 @@ class MultiSacleUNet(nn.Module):
         y0 = self.upSample_2(y1)
         y0 = torch.cat((x0, y0), dim=1)
         y0 = self.inception_4(y0)
-        # the last feed forward & softmax for output prediction
+        # the last feed forward
         y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
         outputs = self.fc2(y0)
-        outputs = outputs.view(-1, PARTS, INPUT_L, INPUT_L)
-#         outputs = self.softmax(outputs)
-        # the masking operations and post-changes to the outputs
-#         input_for_mask = x.view(-1, INPUT_L, INPUT_L, 3)
-#         mask_abs = torch.abs(input_for_mask)
-#         mask_sum = torch.sum(mask_abs, axis=-1)
-#         mask_sign = torch.sign(mask_sum)
-#         single_mask = torch.unsqueeze(mask_sign, dim=-1)
-#         mask = torch.tile(single_mask, (1, 1, PARTS))
-#         not_mask = 1 - single_mask
-#         masked_output = torch.multiply(outputs, mask)
-#         concat_outputs = torch.concat([masked_output, not_mask], axis=-1)
-        return outputs#concat_outputs, outputs_, outputs
+        return outputs.view(-1, PARTS, INPUT_L, INPUT_L)

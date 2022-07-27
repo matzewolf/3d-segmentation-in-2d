@@ -66,9 +66,8 @@ class ShapeNetPartDataset(Dataset):
         return {
             "3d_points": torch.tensor(np.transpose(points_3d_image,
                                       (2, 0, 1))),  # adjust dim to [N,C,H,W]
-            "part_label": torch.squeeze(torch.tensor(parts_image), dim=-1).long()
-#             torch.tensor(np.reshape(np.eye(self.num_classes )[parts_image],
-#                                      (256, 256, 50))),
+            "part_label": torch.squeeze(torch.tensor(parts_image),
+                                        dim=-1).long()
         }
 
     def __len__(self):
