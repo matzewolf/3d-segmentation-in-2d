@@ -70,7 +70,6 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
             print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
             print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-#             Set model back to train
             model.train()
 
 
@@ -156,7 +155,6 @@ if __name__ == "__main__":
         description='U-NET training configuration file path')
     parser.add_argument("--config_path", default="./config.yaml", type=str)
     args = parser.parse_args()
-
     # import the configuration file
     config = {}
     with open(args.config_path, "r") as stream:
