@@ -31,7 +31,6 @@ def train(model, train_dataloader, val_dataloader, device, config):
             # set optimizer gradients to zero, perform forward pass
             optimizer.zero_grad()
             predicted_part_label = model(batch['3d_points'])
-            # Compute loss, Compute gradients, Update network parameters
             loss = criterion(predicted_part_label, batch['part_label'])
             loss.backward()
             optimizer.step()
@@ -41,7 +40,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
             if iteration % config['print_every_n'] == config[
                     'print_every_n'] - 1:
-                print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ')
+                print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ', end = "")
                 print(f'{train_loss_running / config["print_every_n"]:.6f}')
                 train_loss_running = 0.
 
@@ -66,12 +65,12 @@ def train(model, train_dataloader, val_dataloader, device, config):
                 if loss_val < best_loss_val:
                     torch.save(
                         model.state_dict(),
-                        f'/runs/{config["experiment_name"]}/model_best.ckpt')
+                        f'./runs/{config["experiment_name"]}/model_best.ckpt')
                     best_loss_val = loss_val
 
-            print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ')
+            print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end = "")
             print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-            # Set model back to train
+#             Set model back to train
             model.train()
 
 
