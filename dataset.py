@@ -58,7 +58,7 @@ class ShapeNetPartDataset(Dataset):
         points_3d_image = np.zeros((self.size_image, self.size_image, 3),
                                    dtype=np.float32)
         parts_image = np.zeros((self.size_image, self.size_image, 1),
-                               dtype=np.int32) 
+                               dtype=np.int32)
         points_3d_image[points_2d_item[:, 0],
                         points_2d_item[:, 1]] = self.points_3d[item]
         parts_image[points_2d_item[:, 0],
