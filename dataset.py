@@ -14,7 +14,6 @@ class ShapeNetPartDataset(Dataset):
     PyTorch dataset class for the Stanford ShapeNet Part dataset, however with
     some specific preprocessing steps, see `combine_dataset` and
     `prepare_dataset` as well as the paper.
-
     :param path: Path to the downloaded ShapeNet Part directory.
     :param split: Which data split to process, either 'train', 'val', 'test'
         or 'overfit'. Overfit dataset consists of the first instance in the
@@ -38,13 +37,13 @@ class ShapeNetPartDataset(Dataset):
             ValueError("Invalid split")
         self.data = h5py.File(path, 'r')
         if split != 'overfit':
-            self.points_3d = self.data[f"x_{split}"]
-            self.parts = self.data[f"s_{split}"]
-            self.points_2d = self.data[f"p_{split}"]
+            self.points_3d = torch.tensor(np.array(self.data[f"x_{split}"]))
+            self.parts = torch.tensor(np.array(self.data[f"s_{split}"]))
+            self.points_2d = torch.tensor(np.array(self.data[f"p_{split}"]))
         else:
-            points_3d = self.data["x_val"]
-            parts = self.data["s_val"]
-            points_2d = self.data["p_val"]
+            points_3d = torch.tensor(np.array(self.data["x_val"]))
+            parts = torch.tensor(np.array(self.data["s_val"]))
+            points_2d = torch.tensor(np.array(self.data["p_val"]))
             self.points_3d = torch.unsqueeze(points_3d[0], 0)
             self.parts = torch.unsqueeze(parts[0], 0)
             self.points_2d = torch.unsqueeze(points_2d[0], 0)
@@ -58,16 +57,16 @@ class ShapeNetPartDataset(Dataset):
         points_3d_image = np.zeros((self.size_image, self.size_image, 3),
                                    dtype=np.float32)
         parts_image = np.zeros((self.size_image, self.size_image, 1),
-                               dtype=np.int32) + self.num_classes
+                               dtype=np.int32) + 50
         points_3d_image[points_2d_item[:, 0],
                         points_2d_item[:, 1]] = self.points_3d[item]
         parts_image[points_2d_item[:, 0],
                     points_2d_item[:, 1]] = self.parts[item]
         return {
-            "3d_points": np.transpose(points_3d_image,
-                                      (2, 0, 1)),  # adjust dim to [N,C,H,W]
-            "part_label": np.reshape(np.eye(self.num_classes + 1)[parts_image],
-                                     (256, 256, 51)),
+            "3d_points": torch.tensor(np.transpose(points_3d_image,
+                                      (2, 0, 1))),  # adjust dim to [N,C,H,W]
+            "part_label": torch.squeeze(torch.tensor(parts_image),
+                                        dim=-1).long()
         }
 
     def __len__(self):

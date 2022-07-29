@@ -9,6 +9,22 @@ SIZE_SUB = 16
 SIZE_TOP = 16
 SIZE_IMG = SIZE_SUB*SIZE_SUB
 
+"""
+#from their repo
+def build_mask(inputs):
+    print("input shape",inputs.shape)
+    mask_mat = torch.detach(torch.abs(inputs)).view(-1, INPUT_L, INPUT_L, PARTS)
+    print("mask_mat shape",mask_mat.shape)
+    mask = torch.detach(torch.sign(torch.detach(torch.sum(mask_mat, dim=-1))))
+    print("mask shape",mask.shape)
+    return mask
+"""
+def build_mask(inputs):
+    input_for_mask = inputs.reshape(-1, INPUT_L, INPUT_L, 3)
+    mask_abs = torch.detach(torch.abs(input_for_mask))
+    mask_sum = torch.detach(torch.sum(mask_abs, axis=-1))
+    mask_sign = torch.detach(torch.sign(mask_sum))
+    return mask_sign
 
 class Inception(nn.Module):
     def __init__(self, size_in, size_out):
@@ -28,7 +44,6 @@ class Inception(nn.Module):
         # concatenate different conv paths
         x = torch.cat((x0, x1), axis=1)
         return x
-
 
 class MultiSacleUNet(nn.Module):
     def __init__(self):
@@ -51,6 +66,10 @@ class MultiSacleUNet(nn.Module):
         self.softmax = nn.Softmax(dim=3)
 
     def forward(self, x):
+        # masking
+        mask = build_mask(x)
+        mask = mask[:,None]        
+        tiled_mask = torch.tile(mask.reshape((1,INPUT_L,INPUT_L,1)), (1, 1, 1,50))       
         # the UNET encoder
         x0 = self.inception_1(x)
         x1 = self.maxPool_1(x0)
@@ -69,19 +88,12 @@ class MultiSacleUNet(nn.Module):
         y0 = self.upSample_2(y1)
         y0 = torch.cat((x0, y0), dim=1)
         y0 = self.inception_4(y0)
-        # the last feed forward & softmax for output prediction
+        # the last feed forward
         y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
         outputs = self.fc2(y0)
-        outputs = outputs.view(-1, INPUT_L, INPUT_L, PARTS)
-        outputs = self.softmax(outputs)
-        # the masking operations and post-changes to the outputs
-        input_for_mask = x.view(-1, INPUT_L, INPUT_L, 3)
-        mask_abs = torch.abs(input_for_mask)
-        mask_sum = torch.sum(mask_abs, axis=-1)
-        mask_sign = torch.sign(mask_sum)
-        single_mask = torch.unsqueeze(mask_sign, dim=-1)
-        mask = torch.tile(single_mask, (1, 1, PARTS))
-        not_mask = 1 - single_mask
-        masked_output = torch.multiply(outputs, mask)
-        concat_outputs = torch.concat([masked_output, not_mask], axis=-1)
-        return concat_outputs
+        # applying masking 
+        outputs = torch.mul(outputs,tiled_mask)
+        not_mask = 1 - mask
+        outputs = torch.cat([outputs,not_mask.reshape((1,INPUT_L,INPUT_L,1))], dim=-1)
+
+        return outputs.view(-1, PARTS + 1, INPUT_L, INPUT_L)

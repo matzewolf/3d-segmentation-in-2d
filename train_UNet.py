@@ -31,7 +31,6 @@ def train(model, train_dataloader, val_dataloader, device, config):
             # set optimizer gradients to zero, perform forward pass
             optimizer.zero_grad()
             predicted_part_label = model(batch['3d_points'])
-            # Compute loss, Compute gradients, Update network parameters
             loss = criterion(predicted_part_label, batch['part_label'])
             loss.backward()
             optimizer.step()
@@ -41,7 +40,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
             if iteration % config['print_every_n'] == config[
                     'print_every_n'] - 1:
-                print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ')
+                print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ', end="")
                 print(f'{train_loss_running / config["print_every_n"]:.6f}')
                 train_loss_running = 0.
 
@@ -66,19 +65,17 @@ def train(model, train_dataloader, val_dataloader, device, config):
                 if loss_val < best_loss_val:
                     torch.save(
                         model.state_dict(),
-                        f'/runs/{config["experiment_name"]}/model_best.ckpt')
+                        f'C:/Users/aorhu/Masaüstü/ML3DG_Project/3d-segmentation-in-2d/runs/{config["experiment_name"]}/model.ckpt')
                     best_loss_val = loss_val
 
-            print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ')
+            print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
             print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-            # Set model back to train
             model.train()
 
 
 def main(config):
     """
     Function for training multiscale U-Net on ShapeNetPart
-
     :param config: configuration for training - has the following keys:
         'experiment_name': name of the experiment, checkpoint will be saved to
             folder "/runs/<experiment_name>"
@@ -98,12 +95,12 @@ def main(config):
 
     # Declare device
     device = torch.device('cpu')
-    if torch.cuda.is_available() and config['device'].startswith('cuda'):
+    """ if torch.cuda.is_available() and config['device'].startswith('cuda'):
         device = torch.device(config['device'])
         print('Using device:', config['device'])
     else:
         print('Using CPU')
-
+    """
     # Create Dataloaders
     train_dataset = ShapeNetPartDataset(
         path='shapenet_prepared.h5',
@@ -113,7 +110,7 @@ def main(config):
         train_dataset,
         batch_size=config['train_batch_size'],
         shuffle=True,
-        num_workers=4,
+        num_workers=0,
         pin_memory=True,
     )
     val_dataset = ShapeNetPartDataset(
@@ -124,7 +121,7 @@ def main(config):
         val_dataset,
         batch_size=config['val_batch_size'],
         shuffle=False,
-        num_workers=4,
+        num_workers=0,
         pin_memory=True,
     )
 
@@ -157,7 +154,6 @@ if __name__ == "__main__":
         description='U-NET training configuration file path')
     parser.add_argument("--config_path", default="./config.yaml", type=str)
     args = parser.parse_args()
-
     # import the configuration file
     config = {}
     with open(args.config_path, "r") as stream:

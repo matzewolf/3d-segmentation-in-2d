@@ -1,10 +1,10 @@
-experiment_name: 'experiment_1'
-is_overfit: False
+experiment_name: 'temp_model_1'
+is_overfit: True
 device: 'cuda:0'
-max_epochs: 1
-train_batch_size: 4
-val_batch_size: 1
-learning_rate: 0.0001
+max_epochs: 100
+train_batch_size: 32
+val_batch_size: 16
+learning_rate: 0.0008
 resume_ckpt: False
 print_every_n: 1
 validate_every_n: 1
