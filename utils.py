@@ -7,8 +7,8 @@ from scipy.spatial.distance import squareform
 from sklearn.cluster import KMeans
 
 
-def jitter_point_cloud(points_3d: NDArray, sigma: float = 0.01,
-                       clip: float = 0.05) -> NDArray:
+def jitter_point_cloud(points_3d, sigma = 0.01,
+                       clip= 0.05):
     """
     Randomly jitters each point independently.
 
@@ -23,11 +23,11 @@ def jitter_point_cloud(points_3d: NDArray, sigma: float = 0.01,
 
 
 def gpgl2_segmentation(
-        points_3d: NDArray,
-        num_cuts: int = 32,
-        size_sub: int = 16,
-        size_top: int = 16
-) -> tuple[NDArray, float]:
+        points_3d,
+        num_cuts = 32,
+        size_sub = 16,
+        size_top = 16
+):
     k_means = KMeans(n_clusters=num_cuts, n_init=1, max_iter=100)
     points_3d = points_3d + np.random.rand(*points_3d.shape) * 1e-6
     num_points = points_3d.shape[0]
@@ -74,8 +74,8 @@ def gpgl2_segmentation(
     return pos_all, node_loss_rate
 
 
-def graph_cut(data: NDArray, dist_mat: NDArray,
-              num_points: int, num_cuts: int) -> tuple[NDArray, NDArray]:
+def graph_cut(data, dist_mat,
+              num_points, num_cuts):
     num_cutpoints = int(num_points / num_cuts)
     cutpoints_threshold = np.ceil(num_cutpoints * 1.2)
     cluster = np.argmin(dist_mat, axis=-1)
@@ -123,7 +123,7 @@ def graph_cut(data: NDArray, dist_mat: NDArray,
     return np.array(center_pos), labels
 
 
-def gpgl_layout_push(pos: NDArray, size: int) -> NDArray:
+def gpgl_layout_push(pos, size):
     dist_mat = pdist(pos)
     scale1 = 1 / dist_mat.min()
     scale2 = (size-2) / (pos.max() - pos.min())

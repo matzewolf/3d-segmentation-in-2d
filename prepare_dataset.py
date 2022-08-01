@@ -7,7 +7,7 @@ from utils import gpgl2_segmentation
 from utils import jitter_point_cloud
 
 
-def combine_split(split: str, files: list[Path], result_file: h5py.File):
+def combine_split(split, files, result_file):
     """
     Combines all HDF5 files for a specific data split into a new combined HDF5
     file.
@@ -51,7 +51,7 @@ def combine_split(split: str, files: list[Path], result_file: h5py.File):
             offset += dataset_length
 
 
-def combine_dataset(data_path: Path, combined_hdf5_file: Path):
+def combine_dataset(data_path, combined_hdf5_file):
     """
     Combines all raw HDF5 data files for the ShapeNet Part dataset into one
     combined HDF5 data file.
@@ -76,9 +76,9 @@ def combine_dataset(data_path: Path, combined_hdf5_file: Path):
         combine_split('test', test_files, result_file)
 
 
-def prepare_split(split: str, input_file: Path, result_file: h5py.File,
-                  num_repeats_train: int = 5,
-                  jitter_train_points: bool = True):
+def prepare_split(split, input_file, result_file,
+                  num_repeats_train = 5,
+                  jitter_train_points= True):
     """
     Prepares each split such that 3D point clouds with part annotations are
     transformed into 2D images where pixels are assigned to 3D points with part
@@ -152,7 +152,7 @@ def prepare_split(split: str, input_file: Path, result_file: h5py.File,
     print(f"{split} loss: {mean_node_loss}")
 
 
-def prepare_dataset(combined_hdf5_file: Path, prepared_hdf5_file: Path):
+def prepare_dataset(combined_hdf5_file, prepared_hdf5_file):
     """
     Prepares the combined HDF5 data with 3D point clouds with part annotations
     into 2D images where pixels are assigned to 3D points with part

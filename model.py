@@ -21,6 +21,7 @@ def build_mask(inputs):
 """
 def build_mask(inputs):
     input_for_mask = inputs.reshape(-1, INPUT_L, INPUT_L, 3)
+    input_for_mask = torch.detach(torch.softmax(input_for_mask, dim=-1))
     mask_abs = torch.detach(torch.abs(input_for_mask))
     mask_sum = torch.detach(torch.sum(mask_abs, axis=-1))
     mask_sign = torch.detach(torch.sign(mask_sum))
