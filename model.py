@@ -10,7 +10,7 @@ SIZE_TOP = 16
 SIZE_IMG = SIZE_SUB*SIZE_SUB
 
 
-def build_mask(inputs):
+def build_mask(inputs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     mask_abs = torch.detach(torch.abs(inputs))
     mask_sum = torch.detach(torch.sum(mask_abs, dim=1))
     mask_sign = torch.detach(torch.sign(mask_sum))
@@ -24,19 +24,19 @@ class Inception(nn.Module):
     def __init__(self, size_in, size_out):
         super().__init__()
         self.size_in, self.size_out = size_in, size_out
-        self.cv1 = nn.Conv2d(size_in, size_out, 1, padding='same')
-        self.cv2 = nn.Conv2d(size_in, size_out, 3, padding='same')
+        self.conv_1 = nn.Conv2d(size_in, size_out, 1, padding='same')
+        self.conv_2 = nn.Conv2d(size_in, size_out, 3, padding='same')
         self.relu = nn.ReLU()
 
     def forward(self, x):
         # first conv path
-        x0 = self.cv1(x)
-        x0 = self.relu(x0)
+        x_1 = self.conv_1(x)
+        x_1 = self.relu(x_1)
         # second conv path
-        x1 = self.cv2(x)
-        x1 = self.relu(x1)
+        x_2 = self.conv_2(x)
+        x_2 = self.relu(x_2)
         # concatenate different conv paths
-        x = torch.cat((x0, x1), dim=1)
+        x = torch.cat((x_1, x_2), dim=1)
         return x
 
 
@@ -47,46 +47,42 @@ class MultiScaleUNet(nn.Module):
         self.inception_2 = Inception(128, 128)
         self.inception_3 = Inception(512, 128)
         self.inception_4 = Inception(384, 64)
-
-        self.maxPool_1 = nn.MaxPool2d(SIZE_SUB, padding=(1, 1))
-        self.maxPool_2 = nn.MaxPool2d(SIZE_TOP, padding=(1, 1))
-
-        self.upSample_1 = nn.Upsample(size=SIZE_SUB)
-        self.upSample_2 = nn.Upsample(size=INPUT_L)
-
-        self.fc1 = nn.Linear(256, 256)
-        self.fc2 = nn.Linear(128, 50)
-
+        self.max_pool_1 = nn.MaxPool2d(SIZE_SUB, padding=(1, 1))
+        self.max_pool_2 = nn.MaxPool2d(SIZE_TOP, padding=(1, 1))
+        self.up_sample_1 = nn.Upsample(size=SIZE_SUB)
+        self.up_sample_2 = nn.Upsample(size=INPUT_L)
+        self.fc_1 = nn.Linear(256, 256)
+        self.fc_2 = nn.Linear(128, 50)
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=3)
 
     def forward(self, x):
         # get the masks
         mask, not_mask = build_mask(x)
-        # the UNET encoder
+        # U-Net encoder
         x0 = self.inception_1(x)
-        x1 = self.maxPool_1(x0)
+        x1 = self.max_pool_1(x0)
         x1 = self.inception_2(x1)
-        x2 = self.maxPool_2(x1)
-        # the UNET bottle-neck
+        x2 = self.max_pool_2(x1)
+        # U-Net bottleneck
         xg = x2
         xg = torch.permute(xg, (0, 2, 3, 1))
-        xg = self.fc1(xg)
+        xg = self.fc_1(xg)
         xg = self.relu(xg)
         xg = torch.permute(xg, (0, 3, 1, 2))
         y2 = xg
-        # the UNET decoder
-        y1 = self.upSample_1(y2)
+        # U-Net decoder
+        y1 = self.up_sample_1(y2)
         y1 = torch.cat((x1, y1), dim=1)
         y1 = self.inception_3(y1)
-        y0 = self.upSample_2(y1)
+        y0 = self.up_sample_2(y1)
         y0 = torch.cat((x0, y0), dim=1)
         y0 = self.inception_4(y0)
-        # the last feed forward
+        # last feed forward
         y0 = torch.permute(y0, (0, 2, 3, 1))
         y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
-        outputs = self.fc2(y0)
-        # applying masking
+        outputs = self.fc_2(y0)
+        # apply masking
         outputs = torch.mul(outputs, mask)
         outputs = torch.cat([outputs, not_mask], dim=-1)
         outputs = torch.permute(outputs, (0, -1, 1, 2))
