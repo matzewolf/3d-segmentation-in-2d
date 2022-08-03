@@ -1,11 +1,12 @@
 import argparse
+import pickle
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
 import yaml
-import pickle
+
 from dataset import ShapeNetPartDataset
 from model import MultiSacleUNet
 
@@ -85,11 +86,11 @@ def train(model, train_dataloader, val_dataloader, device, config, base_path):
 
                 print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
                 print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-    
+
     # save the logging dicts
     with open(Path(base_path,'training_log_dict.pkl'), 'wb') as f:
         pickle.dump(training_log_dict, f)
-        
+
     with open(Path(base_path,'val_log_dict.pkl'), 'wb') as f:
         pickle.dump(val_log_dict, f)
 
