@@ -20,11 +20,12 @@ def train(model, train_dataloader, val_dataloader, device, config):
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=config['learning_rate'])
     best_loss_val = np.inf
-    # Keep track of running average of train loss for printing, and step loss for plotting
+    # Keep track of running average of train loss for printing,
+    # and step loss for plotting
     train_loss_running = 0.
     training_log_dict = {}
     val_log_dict = {}
-    
+
     for epoch in range(config['max_epochs']):
         for batch_idx, batch in enumerate(train_dataloader):
             # Set model to train
@@ -40,7 +41,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
             # Logging
             step_loss = loss.item()
             train_loss_running += step_loss
-            
+
             # add the step loss to the logging dict
             if epoch not in training_log_dict.keys():
                 training_log_dict[epoch] = []
@@ -55,7 +56,8 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
             # Validation evaluation and logging
             if (iteration % config['validate_every_n'] == config[
-                    'validate_every_n'] - 1) or (iteration % len(val_dataloader) ==0):
+                    'validate_every_n'] - 1) or (iteration % len(
+                    val_dataloader) == 0):
                 # Set model to eval
                 model.eval()
                 # Evaluation on entire validation set
@@ -72,9 +74,9 @@ def train(model, train_dataloader, val_dataloader, device, config):
                 # get the validation epoch loss
                 loss_val /= len(val_dataloader)
                 # if end of epoch, save validation loss for logging
-                if (iteration % len(val_dataloader) ==0):
+                if (iteration % len(val_dataloader) == 0):
                     val_log_dict[epoch] = loss_val
-                # check if this is best validation loss    
+                # check if this is best validation loss
                 if loss_val < best_loss_val:
                     torch.save(
                         model.state_dict(),
@@ -83,7 +85,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
 
                 print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
                 print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-        
+
 
 def main(config):
     """
