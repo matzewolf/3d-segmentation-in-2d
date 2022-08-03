@@ -8,7 +8,7 @@ import torch.nn as nn
 import yaml
 
 from dataset import ShapeNetPartDataset
-from model import MultiSacleUNet
+from model import MultiScaleUNet
 
 
 def train(model, train_dataloader, val_dataloader, device, config, base_path):
@@ -79,21 +79,19 @@ def train(model, train_dataloader, val_dataloader, device, config, base_path):
                     val_log_dict[epoch] = loss_val
                 # check if this is best validation loss
                 if loss_val < best_loss_val:
-                    torch.save(
-                        model.state_dict(),
-                        Path(base_path,'model_best.ckpt'),)
+                    torch.save(model.state_dict(),
+                               Path(base_path, 'model_best.ckpt'))
                     best_loss_val = loss_val
 
                 print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
                 print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
 
     # save the logging dicts
-    with open(Path(base_path,'training_log_dict.pkl'), 'wb') as f:
+    with open(Path(base_path, 'training_log_dict.pkl'), 'wb') as f:
         pickle.dump(training_log_dict, f)
 
-    with open(Path(base_path,'val_log_dict.pkl'), 'wb') as f:
+    with open(Path(base_path, 'val_log_dict.pkl'), 'wb') as f:
         pickle.dump(val_log_dict, f)
-
 
 
 def main(config):
@@ -150,7 +148,7 @@ def main(config):
     )
 
     # Instantiate model
-    model = MultiSacleUNet()
+    model = MultiScaleUNet()
 
     # Load model if resuming from checkpoint
     if config['resume_ckpt']:
@@ -167,8 +165,7 @@ def main(config):
         exist_ok=True, parents=True)
 
     # save the configurations used for this experiment
-    with open(Path(base_path,'used_config.yml'),
-              'w') as outfile:
+    with open(Path(base_path, 'used_config.yml'), 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
     # Start training
     train(model, train_dataloader, val_dataloader, device, config, base_path)

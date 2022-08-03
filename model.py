@@ -12,7 +12,7 @@ SIZE_IMG = SIZE_SUB*SIZE_SUB
 
 def build_mask(inputs):
     mask_abs = torch.detach(torch.abs(inputs))
-    mask_sum = torch.detach(torch.sum(mask_abs, axis=1))
+    mask_sum = torch.detach(torch.sum(mask_abs, dim=1))
     mask_sign = torch.detach(torch.sign(mask_sum))
     mask_sign = mask_sign.unsqueeze(-1)
     tiled_mask = torch.tile(mask_sign, (1, 1, 1, 50))
@@ -36,11 +36,11 @@ class Inception(nn.Module):
         x1 = self.cv2(x)
         x1 = self.relu(x1)
         # concatenate different conv paths
-        x = torch.cat((x0, x1), axis=1)
+        x = torch.cat((x0, x1), dim=1)
         return x
 
 
-class MultiSacleUNet(nn.Module):
+class MultiScaleUNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.inception_1 = Inception(3, 64)
@@ -72,6 +72,7 @@ class MultiSacleUNet(nn.Module):
         xg = x2
         xg = torch.permute(xg, (0, 2, 3, 1))
         xg = self.fc1(xg)
+        xg = self.relu(xg)
         xg = torch.permute(xg, (0, 3, 1, 2))
         y2 = xg
         # the UNET decoder
