@@ -5,12 +5,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import yaml
-
+import pickle
 from dataset import ShapeNetPartDataset
 from model import MultiSacleUNet
 
 
-def train(model, train_dataloader, val_dataloader, device, config):
+def train(model, train_dataloader, val_dataloader, device, config, base_path):
     # Declare loss and move to device
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
@@ -57,7 +57,7 @@ def train(model, train_dataloader, val_dataloader, device, config):
             # Validation evaluation and logging
             if (iteration % config['validate_every_n'] == config[
                     'validate_every_n'] - 1) or (iteration % len(
-                    val_dataloader) == 0):
+                    val_dataloader) == 0 and not config['is_overfit']):
                 # Set model to eval
                 model.eval()
                 # Evaluation on entire validation set
@@ -80,11 +80,19 @@ def train(model, train_dataloader, val_dataloader, device, config):
                 if loss_val < best_loss_val:
                     torch.save(
                         model.state_dict(),
-                        f'./runs/{config["experiment_name"]}/model_best.ckpt')
+                        Path(base_path,'model_best.ckpt'),)
                     best_loss_val = loss_val
 
                 print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
                 print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
+    
+    # save the logging dicts
+    with open(Path(base_path,'training_log_dict.pkl'), 'wb') as f:
+        pickle.dump(training_log_dict, f)
+        
+    with open(Path(base_path,'val_log_dict.pkl'), 'wb') as f:
+        pickle.dump(val_log_dict, f)
+
 
 
 def main(config):
@@ -151,17 +159,18 @@ def main(config):
     # Move model to specified device
     model.to(device)
 
+    # path for saving training related files
+    base_path = Path(config['base_path'], config["experiment_name"])
     # Create folder for saving checkpoints
-    Path(f'./runs/{config["experiment_name"]}').mkdir(
+    base_path.mkdir(
         exist_ok=True, parents=True)
 
     # save the configurations used for this experiment
-    with open(f'./runs/{config["experiment_name"]}/used_config.yml',
+    with open(Path(base_path,'used_config.yml'),
               'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
-
     # Start training
-    train(model, train_dataloader, val_dataloader, device, config)
+    train(model, train_dataloader, val_dataloader, device, config, base_path)
 
 
 if __name__ == "__main__":
