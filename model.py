@@ -9,22 +9,16 @@ SIZE_SUB = 16
 SIZE_TOP = 16
 SIZE_IMG = SIZE_SUB*SIZE_SUB
 
-"""
-#from their repo
+
 def build_mask(inputs):
-    print("input shape",inputs.shape)
-    mask_mat = torch.detach(torch.abs(inputs)).view(-1, INPUT_L, INPUT_L, PARTS)
-    print("mask_mat shape",mask_mat.shape)
-    mask = torch.detach(torch.sign(torch.detach(torch.sum(mask_mat, dim=-1))))
-    print("mask shape",mask.shape)
-    return mask
-"""
-def build_mask(inputs):
-    input_for_mask = inputs.reshape(-1, INPUT_L, INPUT_L, 3)
-    mask_abs = torch.detach(torch.abs(input_for_mask))
-    mask_sum = torch.detach(torch.sum(mask_abs, axis=-1))
+    mask_abs = torch.detach(torch.abs(inputs))
+    mask_sum = torch.detach(torch.sum(mask_abs, dim=1))
     mask_sign = torch.detach(torch.sign(mask_sum))
-    return mask_sign
+    mask_sign = mask_sign.unsqueeze(-1)
+    tiled_mask = torch.tile(mask_sign, (1, 1, 1, 50))
+    not_mask = 1 - mask_sign
+    return tiled_mask, not_mask
+
 
 class Inception(nn.Module):
     def __init__(self, size_in, size_out):
@@ -42,10 +36,11 @@ class Inception(nn.Module):
         x1 = self.cv2(x)
         x1 = self.relu(x1)
         # concatenate different conv paths
-        x = torch.cat((x0, x1), axis=1)
+        x = torch.cat((x0, x1), dim=1)
         return x
 
-class MultiSacleUNet(nn.Module):
+
+class MultiScaleUNet(nn.Module):
     def __init__(self):
         super().__init__()
         self.inception_1 = Inception(3, 64)
@@ -66,10 +61,8 @@ class MultiSacleUNet(nn.Module):
         self.softmax = nn.Softmax(dim=3)
 
     def forward(self, x):
-        # masking
-        mask = build_mask(x)
-        mask = mask[:,None]        
-        tiled_mask = torch.tile(mask.reshape((1,INPUT_L,INPUT_L,1)), (1, 1, 1,50))       
+        # get the masks
+        mask, not_mask = build_mask(x)
         # the UNET encoder
         x0 = self.inception_1(x)
         x1 = self.maxPool_1(x0)
@@ -77,9 +70,10 @@ class MultiSacleUNet(nn.Module):
         x2 = self.maxPool_2(x1)
         # the UNET bottle-neck
         xg = x2
-        xg = xg.view(-1, 1, 1, INPUT_L)
+        xg = torch.permute(xg, (0, 2, 3, 1))
         xg = self.fc1(xg)
-        xg = xg.view(-1, INPUT_L, 1, 1)
+        xg = self.relu(xg)
+        xg = torch.permute(xg, (0, 3, 1, 2))
         y2 = xg
         # the UNET decoder
         y1 = self.upSample_1(y2)
@@ -89,11 +83,11 @@ class MultiSacleUNet(nn.Module):
         y0 = torch.cat((x0, y0), dim=1)
         y0 = self.inception_4(y0)
         # the last feed forward
+        y0 = torch.permute(y0, (0, 2, 3, 1))
         y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
         outputs = self.fc2(y0)
-        # applying masking 
-        outputs = torch.mul(outputs,tiled_mask)
-        not_mask = 1 - mask
-        outputs = torch.cat([outputs,not_mask.reshape((1,INPUT_L,INPUT_L,1))], dim=-1)
-
-        return outputs.view(-1, PARTS + 1, INPUT_L, INPUT_L)
+        # applying masking
+        outputs = torch.mul(outputs, mask)
+        outputs = torch.cat([outputs, not_mask], dim=-1)
+        outputs = torch.permute(outputs, (0, -1, 1, 2))
+        return outputs

@@ -1,4 +1,5 @@
 import argparse
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -7,10 +8,10 @@ import torch.nn as nn
 import yaml
 
 from dataset import ShapeNetPartDataset
-from model import MultiSacleUNet
+from model import MultiScaleUNet
 
 
-def train(model, train_dataloader, val_dataloader, device, config):
+def train(model, train_dataloader, val_dataloader, device, config, base_path):
     # Declare loss and move to device
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
@@ -19,13 +20,17 @@ def train(model, train_dataloader, val_dataloader, device, config):
     # Declare optimizer with learning rate given in config
     optimizer = torch.optim.Adam(model.parameters(),
                                  lr=config['learning_rate'])
-    # Set model to train
-    model.train()
     best_loss_val = np.inf
-    # Keep track of running average of train loss for printing
+    # Keep track of running average of train loss for printing,
+    # and step loss for plotting
     train_loss_running = 0.
+    training_log_dict = {}
+    val_log_dict = {}
+
     for epoch in range(config['max_epochs']):
         for batch_idx, batch in enumerate(train_dataloader):
+            # Set model to train
+            model.train()
             # Move batch to device
             ShapeNetPartDataset.move_batch_to_device(batch, device)
             # set optimizer gradients to zero, perform forward pass
@@ -35,9 +40,15 @@ def train(model, train_dataloader, val_dataloader, device, config):
             loss.backward()
             optimizer.step()
             # Logging
-            train_loss_running += loss.item()
-            iteration = epoch * len(train_dataloader) + batch_idx
+            step_loss = loss.item()
+            train_loss_running += step_loss
 
+            # add the step loss to the logging dict
+            if epoch not in training_log_dict.keys():
+                training_log_dict[epoch] = []
+            training_log_dict[epoch].append(step_loss)
+            # print the running average trainign loss
+            iteration = epoch * len(train_dataloader) + batch_idx
             if iteration % config['print_every_n'] == config[
                     'print_every_n'] - 1:
                 print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ', end="")
@@ -45,8 +56,9 @@ def train(model, train_dataloader, val_dataloader, device, config):
                 train_loss_running = 0.
 
             # Validation evaluation and logging
-            if iteration % config['validate_every_n'] == config[
-                    'validate_every_n'] - 1:
+            if (iteration % config['validate_every_n'] == config[
+                    'validate_every_n'] - 1) or (iteration % len(
+                    val_dataloader) == 0 and not config['is_overfit']):
                 # Set model to eval
                 model.eval()
                 # Evaluation on entire validation set
@@ -57,20 +69,29 @@ def train(model, train_dataloader, val_dataloader, device, config):
                     #  validation forward loss
                     with torch.no_grad():
                         prediction = model(batch_val['3d_points'])
-
+                    # calculate validation step loss
                     loss_val += eval_loss(prediction,
                                           batch_val['part_label']).item()
-
+                # get the validation epoch loss
                 loss_val /= len(val_dataloader)
+                # if end of epoch, save validation loss for logging
+                if (iteration % len(val_dataloader) == 0):
+                    val_log_dict[epoch] = loss_val
+                # check if this is best validation loss
                 if loss_val < best_loss_val:
-                    torch.save(
-                        model.state_dict(),
-                        f'C:/Users/aorhu/Masaüstü/ML3DG_Project/3d-segmentation-in-2d/runs/{config["experiment_name"]}/model.ckpt')
+                    torch.save(model.state_dict(),
+                               Path(base_path, 'model_best.ckpt'))
                     best_loss_val = loss_val
 
-            print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
-            print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-            model.train()
+                print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
+                print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
+
+    # save the logging dicts
+    with open(Path(base_path, 'training_log_dict.pkl'), 'wb') as f:
+        pickle.dump(training_log_dict, f)
+
+    with open(Path(base_path, 'val_log_dict.pkl'), 'wb') as f:
+        pickle.dump(val_log_dict, f)
 
 
 def main(config):
@@ -95,12 +116,12 @@ def main(config):
 
     # Declare device
     device = torch.device('cpu')
-    """ if torch.cuda.is_available() and config['device'].startswith('cuda'):
+    if torch.cuda.is_available() and config['device'].startswith('cuda'):
         device = torch.device(config['device'])
         print('Using device:', config['device'])
     else:
         print('Using CPU')
-    """
+
     # Create Dataloaders
     train_dataset = ShapeNetPartDataset(
         path='shapenet_prepared.h5',
@@ -126,7 +147,7 @@ def main(config):
     )
 
     # Instantiate model
-    model = MultiSacleUNet()
+    model = MultiScaleUNet()
 
     # Load model if resuming from checkpoint
     if config['resume_ckpt']:
@@ -136,17 +157,17 @@ def main(config):
     # Move model to specified device
     model.to(device)
 
+    # path for saving training related files
+    base_path = Path(config['base_path'], config["experiment_name"])
     # Create folder for saving checkpoints
-    Path(f'./runs/{config["experiment_name"]}').mkdir(
+    base_path.mkdir(
         exist_ok=True, parents=True)
 
     # save the configurations used for this experiment
-    with open(f'./runs/{config["experiment_name"]}/used_config.yml',
-              'w') as outfile:
+    with open(Path(base_path, 'used_config.yml'), 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
-
     # Start training
-    train(model, train_dataloader, val_dataloader, device, config)
+    train(model, train_dataloader, val_dataloader, device, config, base_path)
 
 
 if __name__ == "__main__":
