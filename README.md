@@ -33,3 +33,10 @@ will download and extract the ShapeNet Part dataset from Stanford University int
 
 To install the pre-commit hooks, run `pre-commit install`.
 Now you can run the pre-commit hooks locally with `pre-commit run`.
+
+## Training
+
+create the custome_config.yaml or use the config.yaml with the default values of the hyper-params and other params
+
+run `python train_UNet.py --config_path custom_config.yaml`
+or `python train_UNet.py ` to use the default config.yaml

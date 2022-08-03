@@ -3,7 +3,8 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from utils import jitter_point_cloud, gpgl2_segmentation
+from utils import gpgl2_segmentation
+from utils import jitter_point_cloud
 
 
 def combine_split(split: str, files: list[Path], result_file: h5py.File):

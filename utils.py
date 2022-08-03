@@ -1,7 +1,9 @@
 import networkx as nx
 import numpy as np
 from numpy.typing import NDArray
-from scipy.spatial.distance import cdist, pdist, squareform
+from scipy.spatial.distance import cdist
+from scipy.spatial.distance import pdist
+from scipy.spatial.distance import squareform
 from sklearn.cluster import KMeans
 
 
