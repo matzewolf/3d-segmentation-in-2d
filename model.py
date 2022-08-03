@@ -25,7 +25,7 @@ def build_mask(inputs):
     mask_sum = torch.detach(torch.sum(mask_abs, axis=1))
     mask_sign = torch.detach(torch.sign(mask_sum))
     mask_sign = mask_sign.unsqueeze(-1)
-    tiled_mask = torch.tile(mask_sign, (1, 1, 1,50))       
+    tiled_mask = torch.tile(mask_sign, (1, 1, 1,50))
     not_mask = 1 - mask_sign
     return tiled_mask, not_mask
 
@@ -71,8 +71,8 @@ class MultiSacleUNet(nn.Module):
     def forward(self, x):
         # masking
         mask,not_mask = build_mask(x)
-        # mask = mask[:,None]        
-        # tiled_mask = torch.tile(mask.reshape((1,INPUT_L,INPUT_L,1)), (1, 1, 1,50))       
+        # mask = mask[:,None]
+        # tiled_mask = torch.tile(mask.reshape((1,INPUT_L,INPUT_L,1)), (1, 1, 1,50))
         # the UNET encoder
         x0 = self.inception_1(x)
         x1 = self.maxPool_1(x0)
@@ -99,7 +99,7 @@ class MultiSacleUNet(nn.Module):
         y0 = torch.permute(y0,(0,2,3,1))
         y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
         outputs = self.fc2(y0)
-        # applying masking 
+        # applying masking
         outputs = torch.mul(outputs,mask)
         # print(outputs.shape)
         # print(not_mask.shape)
