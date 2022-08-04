@@ -123,6 +123,9 @@ def main(config):
     if torch.cuda.is_available() and config['device'].startswith('cuda'):
         device = torch.device(config['device'])
         print('Using device:', config['device'])
+    elif torch.backends.mps.is_available() and config['device'] == 'mps':
+        device = torch.device('mps')
+        print('Using Apple Silicon MPS')
     else:
         print('Using CPU')
 
