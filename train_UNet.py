@@ -6,16 +6,27 @@ import numpy as np
 import torch
 import torch.nn as nn
 import yaml
+import wandb
+from torch.utils.data import DataLoader
 
 from dataset import ShapeNetPartDataset
 from model import MultiScaleUNet
 
+wandb.init(project="3d-in-2d-seg")
 
-def train(model, train_dataloader, val_dataloader, device, config, base_path):
+
+def train(model: nn.Module,
+          train_dataloader: DataLoader,
+          val_dataloader: DataLoader,
+          device: torch.device | str,
+          config: dict,
+          path: Path):
+          
+    print("training")
     # Declare loss and move to device
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=50)
     criterion.to(device)
-    eval_loss = nn.CrossEntropyLoss()
+    eval_loss = nn.CrossEntropyLoss(ignore_index=50)
     eval_loss.to(device)
     # Declare optimizer with learning rate given in config
     optimizer = torch.optim.Adam(model.parameters(),
@@ -29,6 +40,7 @@ def train(model, train_dataloader, val_dataloader, device, config, base_path):
 
     for epoch in range(config['max_epochs']):
         for batch_idx, batch in enumerate(train_dataloader):
+            num_batches = len(train_dataloader)
             # Set model to train
             model.train()
             # Move batch to device
@@ -47,12 +59,15 @@ def train(model, train_dataloader, val_dataloader, device, config, base_path):
             if epoch not in training_log_dict.keys():
                 training_log_dict[epoch] = []
             training_log_dict[epoch].append(step_loss)
-            # print the running average trainign loss
+            # print the running average training loss
             iteration = epoch * len(train_dataloader) + batch_idx
             if iteration % config['print_every_n'] == config[
                     'print_every_n'] - 1:
-                print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ', end="")
-                print(f'{train_loss_running / config["print_every_n"]:.6f}')
+                train_loss_running /= config["print_every_n"]
+                print(f"Epoch {epoch + 1}/{config['max_epochs']} - ", end="")
+                print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
+                wandb.log({'training loss': train_loss_running})
+                print(f"Training loss {train_loss_running:.4f}")
                 train_loss_running = 0.
 
             # Validation evaluation and logging
@@ -75,23 +90,23 @@ def train(model, train_dataloader, val_dataloader, device, config, base_path):
                 # get the validation epoch loss
                 loss_val /= len(val_dataloader)
                 # if end of epoch, save validation loss for logging
-                if (iteration % len(val_dataloader) == 0):
+                if iteration % len(val_dataloader) == 0:
                     val_log_dict[epoch] = loss_val
-                # check if this is best validation loss
+                # check if this is the best validation loss
                 if loss_val < best_loss_val:
-                    torch.save(model.state_dict(),
-                               Path(base_path, 'model_best.ckpt'))
+                    torch.save(model.state_dict(), path / 'model_best.ckpt')
                     best_loss_val = loss_val
+                print(f"Epoch {epoch + 1}/{config['max_epochs']} - ", end="")
+                print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
+                wandb.log({'validation loss': loss_val})
+                print(f"Validation loss {loss_val:.4f} - ", end="")
+                print(f"best {best_loss_val:.4f}")
 
-                print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end="")
-                print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
-
-    # save the logging dicts
-    with open(Path(base_path, 'training_log_dict.pkl'), 'wb') as f:
-        pickle.dump(training_log_dict, f)
-
-    with open(Path(base_path, 'val_log_dict.pkl'), 'wb') as f:
-        pickle.dump(val_log_dict, f)
+        # save the logging dicts
+        with open(path / 'training_log_dict.pkl', 'wb') as f:
+            pickle.dump(training_log_dict, f)
+        with open(path / 'val_log_dict.pkl', 'wb') as f:
+            pickle.dump(val_log_dict, f)
 
 
 def main(config):
@@ -119,30 +134,32 @@ def main(config):
     if torch.cuda.is_available() and config['device'].startswith('cuda'):
         device = torch.device(config['device'])
         print('Using device:', config['device'])
+    elif torch.backends.mps.is_available() and config['device'] == 'mps':
+        device = torch.device('mps')
+        print('Using Apple Silicon MPS')
     else:
         print('Using CPU')
 
     # Create Dataloaders
+    num_workers = config.get('num_workers', 0)
     train_dataset = ShapeNetPartDataset(
-        path='shapenet_prepared.h5',
         split='train' if not config['is_overfit'] else 'overfit'
     )
-    train_dataloader = torch.utils.data.DataLoader(
+    train_dataloader = DataLoader(
         train_dataset,
         batch_size=config['train_batch_size'],
         shuffle=True,
-        num_workers=0,
+        num_workers=num_workers,
         pin_memory=True,
     )
     val_dataset = ShapeNetPartDataset(
-        path='shapenet_prepared.h5',
         split='val' if not config['is_overfit'] else 'overfit'
     )
-    val_dataloader = torch.utils.data.DataLoader(
+    val_dataloader = DataLoader(
         val_dataset,
         batch_size=config['val_batch_size'],
         shuffle=False,
-        num_workers=0,
+        num_workers=num_workers,
         pin_memory=True,
     )
 
@@ -158,21 +175,25 @@ def main(config):
     model.to(device)
 
     # path for saving training related files
-    base_path = Path(config['base_path'], config["experiment_name"])
+    if 'base_path' in config:
+        base_path = Path(config['base_path'])
+    else:
+        base_path = Path.cwd() / 'runs'
+    experiment_path = base_path / config["experiment_name"]
     # Create folder for saving checkpoints
-    base_path.mkdir(
-        exist_ok=True, parents=True)
+    experiment_path.mkdir(exist_ok=True, parents=True)
 
     # save the configurations used for this experiment
-    with open(Path(base_path, 'used_config.yml'), 'w') as outfile:
+    with open(Path(experiment_path, 'used_config.yml'), 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
     # Start training
-    train(model, train_dataloader, val_dataloader, device, config, base_path)
+    train(model, train_dataloader, val_dataloader,
+          device, config, experiment_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='U-NET training configuration file path')
+        description='U-Net training configuration file path')
     parser.add_argument("--config_path", default="./config.yaml", type=str)
     args = parser.parse_args()
     # import the configuration file
