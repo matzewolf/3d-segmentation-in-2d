@@ -1,4 +1,4 @@
-# Learning to segment 3D point clouds in 2D image space
+# Learning to Segment 3D Point Clouds in 2D Image Space
 
 [![pre-commit.ci status](
     https://results.pre-commit.ci/badge/github/matzewolf/3d-segmentation-in-2d/main.svg)
@@ -36,7 +36,13 @@ Now you can run the pre-commit hooks locally with `pre-commit run`.
 
 ## Training
 
-create the custome_config.yaml or use the config.yaml with the default values of the hyper-params and other params
+Create a custom configuration file `custom_config.yaml` or use the default `config.yaml`
+to determine the hyperparameters and other settings.
 
-run `python train_UNet.py --config_path custom_config.yaml`
-or `python train_UNet.py ` to use the default config.yaml
+Run `python train_unet.py --config_path custom_config.yaml`
+or `python train_unet.py ` to use the default configuration.
+
+## Hardware acceleration
+
+Enable CUDA acceleration by setting the device in the configuration to `device: 'cuda:0'` or similar.
+MPS for Apple Silicon is also supported, set the device to `device: 'mps'`.
