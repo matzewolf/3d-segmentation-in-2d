@@ -19,9 +19,9 @@ def train(model: nn.Module,
           config: dict,
           path: Path):
     # Declare loss and move to device
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=50)
     criterion.to(device)
-    eval_loss = nn.CrossEntropyLoss()
+    eval_loss = nn.CrossEntropyLoss(ignore_index=50)
     eval_loss.to(device)
     # Declare optimizer with learning rate given in config
     optimizer = torch.optim.Adam(model.parameters(),
@@ -35,6 +35,7 @@ def train(model: nn.Module,
 
     for epoch in range(config['max_epochs']):
         for batch_idx, batch in enumerate(train_dataloader):
+            num_batches = len(train_dataloader)
             # Set model to train
             model.train()
             # Move batch to device
@@ -57,8 +58,10 @@ def train(model: nn.Module,
             iteration = epoch * len(train_dataloader) + batch_idx
             if iteration % config['print_every_n'] == config[
                     'print_every_n'] - 1:
-                print(f'[{epoch:03d}/{batch_idx:05d}] train_loss: ', end='')
-                print(f'{train_loss_running / config["print_every_n"]:.6f}')
+                train_loss_running /= config["print_every_n"]
+                print(f"Epoch {epoch + 1}/{config['max_epochs']} - ", end="")
+                print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
+                print(f"Training loss {train_loss_running:.4f}")
                 train_loss_running = 0.
 
             # Validation evaluation and logging
@@ -87,8 +90,10 @@ def train(model: nn.Module,
                 if loss_val < best_loss_val:
                     torch.save(model.state_dict(), path / 'model_best.ckpt')
                     best_loss_val = loss_val
-                print(f'[{epoch:03d}/{batch_idx:05d}] val_loss: ', end='')
-                print(f'{loss_val:.6f} | best_val_loss: {best_loss_val:.6f}')
+                print(f"Epoch {epoch + 1}/{config['max_epochs']} - ", end="")
+                print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
+                print(f"Validation loss {loss_val:.4f} - ", end="")
+                print(f"best {best_loss_val:.4f}")
 
     # save the logging dicts
     with open(path / 'training_log_dict.pkl', 'wb') as f:
