@@ -108,12 +108,13 @@ def main(config):
 
     :param config: configuration for training - has the following keys:
         'experiment_name': name of the experiment, checkpoint will be saved to
-            folder "/runs/<experiment_name>"
-        'device': device on which model is trained, e.g. 'cpu' or 'cuda:0'
+            directory "runs/<experiment_name>"
+        'device': device on which the model is trained, e.g. 'cpu', 'cuda:0' or
+            'mps'
         'batch_size': batch size for training and validation dataloaders
         'resume_ckpt': None if training from scratch, otherwise path to
             checkpoint (saved weights)
-        'learning_rate': learning rate for optimizer
+        'learning_rate': learning rate for the optimizer
         'max_epochs': total number of epochs after which training should stop
         'print_every_n': print train loss every n iterations
         'validate_every_n': print validation loss and validation accuracy every
