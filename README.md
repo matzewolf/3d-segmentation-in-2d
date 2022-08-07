@@ -29,20 +29,33 @@ conda activate 3d-seg-in-2d
 ```
 will download and extract the ShapeNet Part dataset from Stanford University into the directory `hdf5_data`.
 
-## Contributing
+### Project 3D point clouds into 2D image space
 
-To install the pre-commit hooks, run `pre-commit install`.
-Now you can run the pre-commit hooks locally with `pre-commit run`.
+```commandline
+python prepare_dataset.py
+```
 
 ## Training
 
 Create a custom configuration file `custom_config.yaml` or use the default `config.yaml`
-to determine the hyperparameters and other settings.
+to determine the hyperparameters and other settings. Run
+```commandline
+python train_unet.py --config_path custom_config.yaml
+```
+or simply `python train_unet.py` to use the default configuration.
 
-Run `python train_unet.py --config_path custom_config.yaml`
-or `python train_unet.py ` to use the default configuration.
+### Configuration options
 
-## Hardware acceleration
+- `device`: Enable CUDA acceleration by setting the device in the configuration to `device: 'cuda:0'` or similar.
+  MPS for Apple Silicon is also supported, set the device to `device: 'mps'`.
 
-Enable CUDA acceleration by setting the device in the configuration to `device: 'cuda:0'` or similar.
-MPS for Apple Silicon is also supported, set the device to `device: 'mps'`.
+## Evaluation
+
+```commandline
+python test.py --model_path <MODEL_PATH>
+```
+to evaluate the model located at `<MODEL_PATH>`.
+
+## Contributing
+
+You can run the pre-commit hooks locally with `pre-commit run`.
