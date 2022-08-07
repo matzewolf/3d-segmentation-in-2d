@@ -1,14 +1,13 @@
 import argparse
-import pickle
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 import yaml
 from torch.utils.data import DataLoader
 
-import wandb
 from dataset import ShapeNetPartDataset
 from model import MultiScaleUNet
 
@@ -75,9 +74,7 @@ def train(model: nn.Module,
 
             # Validation evaluation and logging
             if (iteration % config['validate_every_n'] == config[
-                    'validate_every_n'] - 1 or _first_v):  # or
-                # (iteration % len(val_dataloader) == 0
-                # and not config['is_overfit']):
+                    'validate_every_n'] - 1 or _first_v):
                 _first_v = False
                 # Set model to eval
                 model.eval()
@@ -103,28 +100,23 @@ def train(model: nn.Module,
                     best_loss_val = loss_val
                 print(f"Epoch {epoch + 1}/{config['max_epochs']} - ", end="")
                 print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
-                wandb.log({'validation loss': loss_val})
                 print(f"Validation loss {loss_val:.4f} - ", end="")
                 print(f"best {best_loss_val:.4f}")
-
-        # save the logging dicts
-        with open(path / 'training_log_dict.pkl', 'wb') as f:
-            pickle.dump(training_log_dict, f)
-        with open(path / 'val_log_dict.pkl', 'wb') as f:
-            pickle.dump(val_log_dict, f)
 
 
 def main(config):
     """
     Function for training multiscale U-Net on ShapeNetPart
+
     :param config: configuration for training - has the following keys:
         'experiment_name': name of the experiment, checkpoint will be saved to
-            folder "/runs/<experiment_name>"
-        'device': device on which model is trained, e.g. 'cpu' or 'cuda:0'
+            directory "runs/<experiment_name>"
+        'device': device on which the model is trained, e.g. 'cpu', 'cuda:0' or
+            'mps'
         'batch_size': batch size for training and validation dataloaders
         'resume_ckpt': None if training from scratch, otherwise path to
             checkpoint (saved weights)
-        'learning_rate': learning rate for optimizer
+        'learning_rate': learning rate for the optimizer
         'max_epochs': total number of epochs after which training should stop
         'print_every_n': print train loss every n iterations
         'validate_every_n': print validation loss and validation accuracy every
@@ -142,14 +134,10 @@ def main(config):
     elif torch.backends.mps.is_available() and config['device'] == 'mps':
         device = torch.device('mps')
         print('Using Apple Silicon MPS')
-    elif torch.backends.mps.is_available() and config['device'] == 'mps':
-        device = torch.device('mps')
-        print('Using Apple Silicon MPS')
     else:
         print('Using CPU')
 
     # Create Dataloaders
-    num_workers = config.get('num_workers', 0)
     num_workers = config.get('num_workers', 0)
     train_dataset = ShapeNetPartDataset(
         split='train' if not config['is_overfit'] else 'overfit'
