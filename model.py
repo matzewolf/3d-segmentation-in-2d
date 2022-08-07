@@ -24,16 +24,16 @@ class Inception(nn.Module):
     def __init__(self, size_in, size_out):
         super().__init__()
         self.size_in, self.size_out = size_in, size_out
-        self.conv_1 = nn.Conv2d(size_in, size_out, 1, padding='same')
-        self.conv_2 = nn.Conv2d(size_in, size_out, 3, padding='same')
+        self.cv1 = nn.Conv2d(size_in, size_out, 1, padding='same')
+        self.cv2 = nn.Conv2d(size_in, size_out, 3, padding='same')
         self.relu = nn.ReLU()
 
     def forward(self, x):
         # first conv path
-        x_1 = self.conv_1(x)
+        x_1 = self.cv1(x)
         x_1 = self.relu(x_1)
         # second conv path
-        x_2 = self.conv_2(x)
+        x_2 = self.cv2(x)
         x_2 = self.relu(x_2)
         # concatenate different conv paths
         x = torch.cat((x_1, x_2), dim=1)
@@ -51,8 +51,8 @@ class MultiScaleUNet(nn.Module):
         self.max_pool_2 = nn.MaxPool2d(SIZE_TOP, padding=(1, 1))
         self.up_sample_1 = nn.Upsample(size=SIZE_SUB)
         self.up_sample_2 = nn.Upsample(size=INPUT_L)
-        self.fc_1 = nn.Linear(256, 256)
-        self.fc_2 = nn.Linear(128, 50)
+        self.fc1 = nn.Linear(256, 256)
+        self.fc2 = nn.Linear(128, 50)
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=3)
 
@@ -67,7 +67,7 @@ class MultiScaleUNet(nn.Module):
         # U-Net bottleneck
         xg = x2
         xg = torch.permute(xg, (0, 2, 3, 1))
-        xg = self.fc_1(xg)
+        xg = self.fc1(xg)
         xg = self.relu(xg)
         xg = torch.permute(xg, (0, 3, 1, 2))
         y2 = xg
@@ -81,7 +81,7 @@ class MultiScaleUNet(nn.Module):
         # last feed forward
         y0 = torch.permute(y0, (0, 2, 3, 1))
         y0 = y0.view(-1, INPUT_L, INPUT_L, 128)
-        outputs = self.fc_2(y0)
+        outputs = self.fc2(y0)
         # apply masking
         outputs = torch.mul(outputs, mask)
         outputs = torch.cat([outputs, not_mask], dim=-1)

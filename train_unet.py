@@ -1,15 +1,17 @@
 import argparse
-import pickle
 from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 import yaml
 from torch.utils.data import DataLoader
 
 from dataset import ShapeNetPartDataset
 from model import MultiScaleUNet
+
+wandb.init(project="3d-in-2d-seg")
 
 
 def train(model: nn.Module,
@@ -18,6 +20,9 @@ def train(model: nn.Module,
           device: torch.device | str,
           config: dict,
           path: Path):
+
+    _first_t = True
+    _first_v = True
     # Declare loss and move to device
     criterion = nn.CrossEntropyLoss(ignore_index=50)
     criterion.to(device)
@@ -57,17 +62,20 @@ def train(model: nn.Module,
             # print the running average training loss
             iteration = epoch * len(train_dataloader) + batch_idx
             if iteration % config['print_every_n'] == config[
-                    'print_every_n'] - 1:
-                train_loss_running /= config["print_every_n"]
+                    'print_every_n'] - 1 or _first_t:
+                if not _first_t:
+                    train_loss_running /= config["print_every_n"]
+                _first_t = False
                 print(f"Epoch {epoch + 1}/{config['max_epochs']} - ", end="")
                 print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
+                wandb.log({'training loss': train_loss_running})
                 print(f"Training loss {train_loss_running:.4f}")
                 train_loss_running = 0.
 
             # Validation evaluation and logging
             if (iteration % config['validate_every_n'] == config[
-                    'validate_every_n'] - 1) or (iteration % len(
-                    val_dataloader) == 0 and not config['is_overfit']):
+                    'validate_every_n'] - 1 or _first_v):
+                _first_v = False
                 # Set model to eval
                 model.eval()
                 # Evaluation on entire validation set
@@ -94,12 +102,6 @@ def train(model: nn.Module,
                 print(f"Batch {batch_idx + 1}/{num_batches} - ", end="")
                 print(f"Validation loss {loss_val:.4f} - ", end="")
                 print(f"best {best_loss_val:.4f}")
-
-    # save the logging dicts
-    with open(path / 'training_log_dict.pkl', 'wb') as f:
-        pickle.dump(training_log_dict, f)
-    with open(path / 'val_log_dict.pkl', 'wb') as f:
-        pickle.dump(val_log_dict, f)
 
 
 def main(config):
@@ -163,7 +165,7 @@ def main(config):
 
     # Load model if resuming from checkpoint
     if config['resume_ckpt']:
-        model.load_state_dict(torch.load(config['resume_ckpt'],
+        model.load_state_dict(torch.load(config['ckpt_path'],
                                          map_location='cpu'))
 
     # Move model to specified device
