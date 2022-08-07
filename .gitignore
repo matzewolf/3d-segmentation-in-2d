@@ -2,8 +2,10 @@
 hdf5_data/
 *.h5
 *.hdf5
+
 # Experiment logs
 runs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

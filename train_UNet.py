@@ -142,10 +142,14 @@ def main(config):
     elif torch.backends.mps.is_available() and config['device'] == 'mps':
         device = torch.device('mps')
         print('Using Apple Silicon MPS')
+    elif torch.backends.mps.is_available() and config['device'] == 'mps':
+        device = torch.device('mps')
+        print('Using Apple Silicon MPS')
     else:
         print('Using CPU')
 
     # Create Dataloaders
+    num_workers = config.get('num_workers', 0)
     num_workers = config.get('num_workers', 0)
     train_dataset = ShapeNetPartDataset(
         split='train' if not config['is_overfit'] else 'overfit'
