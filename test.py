@@ -27,35 +27,32 @@ def test(s_test, p_test, x_test, y_test,
     :return pre_test: predicted labels
     """
     test_set_len = len(y_test)
-    f1 = h5py.File(result_path, 'w')
-    f1.create_dataset('x_test', data=x_test)  # p cloud position in 3D
-    f1.create_dataset('y_test', data=y_test)  # p cloud shape class
-    f1.create_dataset('s_test', data=s_test)  # p cloud segments
-    f1.create_dataset('p_test', data=p_test)  # 2D position
-    pre_set = f1.create_dataset('pre_test', shape=(test_set_len, 2048, 1),
-                                dtype=np.int64)
+    with h5py.File(result_path, 'w') as f:
+        f.create_dataset('x_test', data=x_test)  # p cloud position in 3D
+        f.create_dataset('y_test', data=y_test)  # p cloud shape class
+        f.create_dataset('s_test', data=s_test)  # p cloud segments
+        f.create_dataset('p_test', data=p_test)  # 2D position
+        pre_set = f.create_dataset('pre_test', shape=(test_set_len, 2048, 1),
+                                   dtype=np.int64)
+        pre_test = np.zeros_like(s_test)
 
-    pre_test = np.zeros_like(s_test)
-    for idx_sample, pos, obj_class in zip(range(0, len(p_test)),
-                                          p_test, y_test):
+        for idx_sample, pos, obj_class in zip(range(0, len(p_test)),
+                                              p_test, y_test):
+            input_tensor = torch.tensor(test_dataset.
+                                        __getitem__(idx_sample)["3d_points"])
+            input_tensor = input_tensor[None, :]
+            pre_image = model(input_tensor)
+            label_min = int(class_label_region[obj_class, 0])
+            label_max = int(class_label_region[obj_class, 1] + 1)
+            pre_image = pre_image[:, label_min:label_max, :, :] \
+                .argmax(1) + label_min
+            pre_sample = np.zeros_like(pre_test[0])
+            pre_sample = pre_image[:, pos[:, 0], pos[:, 1]]
 
-        input_tensor = torch.tensor(test_dataset.
-                                    __getitem__(idx_sample)["3d_points"])
-        input_tensor = input_tensor[None, :]
-        pre_image = model(input_tensor)
-        label_min = int(class_label_region[obj_class, 0])
-        label_max = int(class_label_region[obj_class, 1] + 1)
-        pre_image = pre_image[:, label_min:label_max, :, :] \
-            .argmax(1) + label_min
-        pre_sample = np.zeros_like(pre_test[0])
-        pre_sample = pre_image[:, pos[:, 0], pos[:, 1]]
-
-        pre_test[idx_sample] = pre_sample[:, None][0]
-        pre_set[idx_sample] = pre_sample.T
-        if idx_sample % 100 == 0:
-            print('finish point segments: ', idx_sample, '/', len(s_test))
-
-    f1.close()
+            pre_test[idx_sample] = pre_sample[:, None][0]
+            pre_set[idx_sample] = pre_sample.T
+            if idx_sample % 100 == 0:
+                print('finish point segments: ', idx_sample, '/', len(s_test))
     return pre_test
 
 
@@ -71,11 +68,11 @@ def main(config):
 
     # reading the test dataset from disk
     dataset_path = "shapenet_prepared.h5"
-    f = h5py.File(dataset_path, 'r')
-    x_test = f['x_test'][:]
-    y_test = f['y_test'][:]
-    s_test = f['s_test'][:]
-    p_test = f['p_test'][:]
+    with h5py.File(dataset_path, 'r') as f:
+        x_test = f['x_test'][:]
+        y_test = f['y_test'][:]
+        s_test = f['s_test'][:]
+        p_test = f['p_test'][:]
 
     # creating class part label intervals
     class_label_region = np.zeros((16, 2), dtype=np.int64)
@@ -101,9 +98,6 @@ def main(config):
     result_path = 'ShapeNet_testing_result.hdf5'
     pre_test = test(s_test, p_test, x_test, y_test, model,
                     class_label_region, test_dataset, result_path)
-
-    # closing files
-    f.close()
 
     # calculate iou for each shape
     iou_shape = np.zeros(len(s_test))
