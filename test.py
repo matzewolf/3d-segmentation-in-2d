@@ -14,7 +14,8 @@ def test(s_test, p_test, x_test, y_test,
          model, class_label_region,
          test_dataset, result_path, device):
     """
-    Function to predict and store the predicted values in a .hdf5 file
+    Predicts and stores the predicted values in a HDF5 file
+
     :param s_test: point cloud segments
     :param p_test: 2D position
     :param x_test: point cloud position in 3D
@@ -22,8 +23,7 @@ def test(s_test, p_test, x_test, y_test,
     :param model: pre-trained model
     :param class_label_region: class part label intervals
     :param test_dataset: ShapeNetPartDataset 'test' split
-    :param result_path: directory to store the .hdf5 file
-
+    :param result_path: Path to the HDF5 file
     :return pre_test: predicted labels
     """
     test_set_len = len(y_test)
@@ -57,7 +57,8 @@ def test(s_test, p_test, x_test, y_test,
 def evaluate(model_path):
     """
     Evaluates the model.
-    :param model_path: path to trained model
+
+    :param model_path: Path to the trained model
     """
     # reading class names of the ShapeNet dataset
     class_name = np.genfromtxt('all_object_categories.txt', dtype='U')[:, 0]
