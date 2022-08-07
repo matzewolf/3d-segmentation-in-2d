@@ -45,10 +45,9 @@ def test(s_test, p_test, x_test, y_test,
             pre_image = model(input_tensor).to('cpu')
             label_min = int(class_label_region[obj_class, 0])
             label_max = int(class_label_region[obj_class, 1] + 1)
-            pre_image = pre_image[:, label_min:label_max, :, :] \
-                .argmax(1) + label_min
+            pre_image = pre_image[:, label_min:label_max,
+                                  :, :].argmax(1) + label_min
             pre_sample = pre_image[:, pos[:, 0], pos[:, 1]]
-
             pre_test[idx_sample] = pre_sample[:, None][0]
             pre_set[idx_sample] = pre_sample.T
     return pre_test
@@ -62,7 +61,6 @@ def evaluate(model_path):
     """
     # reading class names of the ShapeNet dataset
     class_name = np.genfromtxt('all_object_categories.txt', dtype='U')[:, 0]
-
     # reading the test dataset from disk
     dataset_path = Path("shapenet_prepared.h5")
     with h5py.File(dataset_path, 'r') as f:
@@ -94,10 +92,8 @@ def evaluate(model_path):
     model.load_state_dict(torch.load(model_path, map_location='cpu'))
     model.to(device)
     model.eval()
-
     # creating test split
     test_dataset = ShapeNetPartDataset(split='test')
-
     # creating new file to store results
     result_path = Path('ShapeNet_testing_result.hdf5')
     pre_test = test(s_test, p_test, x_test, y_test, model,
@@ -117,7 +113,7 @@ def evaluate(model_path):
             fp = np.sum((pre_sample == i_class) * (gt_sample != i_class))
             fn = np.sum((pre_sample != i_class) * (gt_sample == i_class))
             # if current segment exists then count the iou
-            iou = (tp+1e-12) / (tp+fp+fn+1e-12)
+            iou = (tp + 1e-12) / (tp + fp + fn + 1e-12)
             iou_list.append(iou)
         iou_shape[idx_sample] = np.mean(iou_list)
     print(f'iou_instance = {iou_shape.mean()}')
