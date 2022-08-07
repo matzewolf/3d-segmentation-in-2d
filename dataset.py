@@ -14,6 +14,7 @@ class ShapeNetPartDataset(Dataset):
     PyTorch dataset class for the Stanford ShapeNet Part dataset, however with
     some specific preprocessing steps, see `combine_dataset` and
     `prepare_dataset` as well as the paper.
+
     :param raw_data_path: Path to the downloaded ShapeNet Part directory.
     :param combined_data_file: Path to the HDF5 file for the combined data.
     :param prepared_data_file: Path to the HDF5 file for the prepared data.
