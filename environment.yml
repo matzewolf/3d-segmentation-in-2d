@@ -11,5 +11,6 @@ dependencies:
   - scipy
   - scikit-learn
   - wandb
+  - tqdm
   # dev dependencies
   - pre-commit
