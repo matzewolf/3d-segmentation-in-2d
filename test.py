@@ -52,9 +52,8 @@ def test(s_test, p_test, x_test, y_test,
 
         pre_test[idx_sample] = pre_sample[:, None][0]
         pre_set[idx_sample] = pre_sample.T
-        if(idx_sample % 100 == 0):
-            print('finish point segments: ', idx_sample,
-                  '/', len(s_test))
+        if idx_sample % 100 == 0:
+            print('finish point segments: ', idx_sample, '/', len(s_test))
 
     f1.close()
     return pre_test
@@ -127,7 +126,7 @@ def main(config):
 
         iou_shape[idx_sample] = np.mean(iou_list)
 
-        if(idx_sample % 100 == 0):
+        if idx_sample % 100 == 0:
             print('finish iou calculation: ', idx_sample, '/', len(s_test))
 
     print('iou_instance =', iou_shape.mean())
