@@ -95,8 +95,7 @@ def main(config):
     model.eval()
 
     # creating test split
-    test_dataset = ShapeNetPartDataset(path='shapenet_prepared.h5',
-                                       split='test')
+    test_dataset = ShapeNetPartDataset(split='test')
     print(test_dataset.__len__())
 
     # creating new file to store results
