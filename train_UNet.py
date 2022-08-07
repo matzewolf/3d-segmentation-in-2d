@@ -5,10 +5,10 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
 import yaml
 from torch.utils.data import DataLoader
 
-import wandb
 from dataset import ShapeNetPartDataset
 from model import MultiScaleUNet
 
