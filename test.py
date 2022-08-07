@@ -4,7 +4,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import torch
-import yaml
+from tqdm import tqdm
 
 from dataset import ShapeNetPartDataset
 from model import MultiScaleUNet
@@ -12,7 +12,7 @@ from model import MultiScaleUNet
 
 def test(s_test, p_test, x_test, y_test,
          model, class_label_region,
-         test_dataset, result_path):
+         test_dataset, result_path, device):
     """
     Function to predict and store the predicted values in a .hdf5 file
     :param s_test: point cloud segments
@@ -36,38 +36,34 @@ def test(s_test, p_test, x_test, y_test,
                                    dtype=np.int64)
         pre_test = np.zeros_like(s_test)
 
-        for idx_sample, pos, obj_class in zip(range(0, len(p_test)),
+        for idx_sample, pos, obj_class in zip(tqdm(range(0, len(p_test)),
+                                                   desc='point segments'),
                                               p_test, y_test):
-            input_tensor = torch.tensor(test_dataset.
-                                        __getitem__(idx_sample)["3d_points"])
+            input_tensor = test_dataset.__getitem__(idx_sample)["3d_points"]
             input_tensor = input_tensor[None, :]
-            pre_image = model(input_tensor)
+            input_tensor = input_tensor.contiguous().to(device)
+            pre_image = model(input_tensor).to('cpu')
             label_min = int(class_label_region[obj_class, 0])
             label_max = int(class_label_region[obj_class, 1] + 1)
             pre_image = pre_image[:, label_min:label_max, :, :] \
                 .argmax(1) + label_min
-            pre_sample = np.zeros_like(pre_test[0])
             pre_sample = pre_image[:, pos[:, 0], pos[:, 1]]
 
             pre_test[idx_sample] = pre_sample[:, None][0]
             pre_set[idx_sample] = pre_sample.T
-            if idx_sample % 100 == 0:
-                print('finish point segments: ', idx_sample, '/', len(s_test))
     return pre_test
 
 
-def main(config):
+def evaluate(model_path):
     """
-    Function for testing
-    :param config: configuration for training -
-        need only following keys for testing:
-        'pt_model_path': pre-trained model path to be used for predictions
+    Evaluates the model.
+    :param model_path: path to trained model
     """
     # reading class names of the ShapeNet dataset
     class_name = np.genfromtxt('all_object_categories.txt', dtype='U')[:, 0]
 
     # reading the test dataset from disk
-    dataset_path = "shapenet_prepared.h5"
+    dataset_path = Path("shapenet_prepared.h5")
     with h5py.File(dataset_path, 'r') as f:
         x_test = f['x_test'][:]
         y_test = f['y_test'][:]
@@ -84,69 +80,59 @@ def main(config):
         class_label_region[i_class, 0] = label_min
         class_label_region[i_class, 1] = label_max
 
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    elif torch.backends.mps.is_available():
+        device = torch.device('mps')
+    else:
+        device = torch.device('cpu')
+    print(f'Using device {device}')
+
     # reading the trained model
-    ckpt = Path(config['pt_model_path'])
     model = MultiScaleUNet()
-    model.load_state_dict(torch.load(ckpt, map_location='cpu'))
+    model.load_state_dict(torch.load(model_path, map_location='cpu'))
+    model.to(device)
     model.eval()
 
     # creating test split
     test_dataset = ShapeNetPartDataset(split='test')
-    print(test_dataset.__len__())
 
     # creating new file to store results
-    result_path = 'ShapeNet_testing_result.hdf5'
+    result_path = Path('ShapeNet_testing_result.hdf5')
     pre_test = test(s_test, p_test, x_test, y_test, model,
-                    class_label_region, test_dataset, result_path)
+                    class_label_region, test_dataset, result_path, device)
 
     # calculate iou for each shape
     iou_shape = np.zeros(len(s_test))
     for idx_sample, pre_sample, gt_sample, obj_class in \
-            zip(range(len(s_test)), pre_test, s_test, y_test):
-
+            zip(tqdm(range(len(s_test)), desc='iou calculation'),
+                pre_test, s_test, y_test):
         label_min = int(class_label_region[obj_class, 0])
         label_max = int(class_label_region[obj_class, 1] + 1)
-
         iou_list = []
         # for each segment, calculate iou
         for i_class in range(label_min, label_max):
             tp = np.sum((pre_sample == i_class) * (gt_sample == i_class))
             fp = np.sum((pre_sample == i_class) * (gt_sample != i_class))
             fn = np.sum((pre_sample != i_class) * (gt_sample == i_class))
-
             # if current segment exists then count the iou
             iou = (tp+1e-12) / (tp+fp+fn+1e-12)
             iou_list.append(iou)
-
         iou_shape[idx_sample] = np.mean(iou_list)
-
-        if idx_sample % 100 == 0:
-            print('finish iou calculation: ', idx_sample, '/', len(s_test))
-
-    print('iou_instance =', iou_shape.mean())
+    print(f'iou_instance = {iou_shape.mean()}')
 
     iou_class = np.zeros(16)
     for obj_class in range(16):
         iou_obj_class = iou_shape[y_test[:] == obj_class]
         iou_class[obj_class] = iou_obj_class.mean()
-    print('iou_class =', iou_class.mean())
-
+    print(f'iou_class = {iou_class.mean()}')
     for obj_class in range(16):
-        print('class', obj_class, ', class name:', class_name[obj_class],
-              ",iou=", iou_class[obj_class])
+        print(f'class {obj_class}, {class_name[obj_class]}: ', end='')
+        print(f'iou = {iou_class[obj_class]}')
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='U-NET training configuration file path')
-    parser.add_argument("--config_path", default="./config.yaml", type=str)
+    parser = argparse.ArgumentParser(description='Model evaluation')
+    parser.add_argument("--model_path", default="./model_best.ckpt", type=str)
     args = parser.parse_args()
-    # import the configuration file
-    config = {}
-    with open(args.config_path, "r") as stream:
-        try:
-            config = yaml.safe_load(stream)
-        except yaml.YAMLError as exc:
-            print(exc)
-    # train
-    main(config)
+    evaluate(args.model_path)
