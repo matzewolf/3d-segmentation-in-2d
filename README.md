@@ -56,6 +56,13 @@ python test.py --model_path <MODEL_PATH>
 ```
 to evaluate the model located at `<MODEL_PATH>`.
 
+## Result visualization
+
+To visualize the segmentation result for class `<idx_class>` and sample `<idx_class_sample>`, run
+```commandline
+python visualization.py <idx_class> <idx_class_sample>
+```
+
 ## Contributing
 
 You can run the pre-commit hooks locally with `pre-commit run`.
