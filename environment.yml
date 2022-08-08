@@ -12,5 +12,7 @@ dependencies:
   - scikit-learn
   - wandb
   - tqdm
+  - plotly
+  - seaborn
   # dev dependencies
   - pre-commit
