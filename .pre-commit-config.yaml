@@ -1,10 +1,10 @@
 repos:
   - repo: https://github.com/pycqa/flake8
-    rev: 5.0.4
+    rev: 7.1.1
     hooks:
       - id: flake8
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
@@ -13,7 +13,7 @@ repos:
       - id: check-ast
       - id: check-case-conflict
       - id: check-merge-conflict
-  - repo: https://github.com/asottile/reorder_python_imports
-    rev: v3.8.2
+  - repo: https://github.com/asottile/reorder-python-imports
+    rev: v3.14.0
     hooks:
       - id: reorder-python-imports
